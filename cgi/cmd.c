@@ -3,7 +3,7 @@
  * CMD.C -  Nagios Command CGI
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 11-10-2002
+ * Last Modified: 05-14-2002
  *
  * License:
  * 
@@ -543,9 +543,6 @@ int process_cgivars(void){
 				content_type=HTML_CONTENT;
 		        }
                 }
-
-	/* free memory allocated to the CGI variables */
-	free_cgivars(variables);
 
 	return error;
         }
@@ -1820,7 +1817,7 @@ int write_command_to_file(char *cmd){
 	        }
 
  	/* open the command for writing (since this is a pipe, it will really be appended) */
-	fp=fopen(command_file,"w");
+	fp=fopen(command_file,"w+");
 	if(fp==NULL){
 
 		if(content_type==WML_CONTENT)

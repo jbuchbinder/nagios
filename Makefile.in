@@ -1,7 +1,7 @@
 ###############################
 # Makefile for Nagios
 #
-# Last Modified: 10-25-2002
+# Last Modified: 06-29-2002
 ###############################
 
 
@@ -52,9 +52,9 @@ none:
 # FreeBSD make does not support -C option, so we'll use the Apache style... (patch by Stanley Hopcroft 12/27/1999)
 
 all:
-	cd $(SRC_BASE) && $(MAKE)
-	cd $(SRC_CGI) && $(MAKE)
-	cd $(SRC_HTM) && $(MAKE)
+	cd $(SRC_BASE); $(MAKE) ; cd ..
+	cd $(SRC_CGI); $(MAKE) ; cd ..
+	cd $(SRC_HTM); $(MAKE) ; cd ..
 
 	@echo ""
 	@echo "*** Compile finished ***"
@@ -81,37 +81,9 @@ all:
 	@echo "       object configuration files, as they determine what/how"
 	@echo "       things get monitored!"
 	@echo ""
-	@echo ""
-	@echo "*** Support Notes *******************************************"
-	@echo ""
-	@echo "If you have questions about configuring or running Nagios,"
-	@echo "please make sure that you:"
-	@echo ""
-	@echo "     - Look at the sample config files"
-	@echo "     - Read the HTML documentation"
-	@echo "     - Read the FAQs online at http://www.nagios.org/faqs"
-	@echo ""
-	@echo "before you post a question to one of the mailing lists."
-	@echo "Also make sure to include pertinent information that could"
-	@echo "help others help you.  This might include:"
-	@echo ""
-	@echo "     - What version of Nagios you are using"
-	@echo "     - What version of the plugins you are using"
-	@echo "     - Relevant snippets from your config files"
-	@echo "     - Relevant error messages from the Nagios log file"
-	@echo ""
-	@echo "For those of you who are interested in contract support or"
-	@echo "consulting services for Nagios, please visit:"
-	@echo ""
-	@echo "       http://www.nagios.org/contractsupport"
-	@echo ""
-	@echo "*************************************************************"
-	@echo ""
-	@echo "Enjoy."
-	@echo ""
 
 nagios:
-	cd $(SRC_BASE) && $(MAKE)
+	cd $(SRC_BASE); $(MAKE) ; cd ..
 
 config:
 	@echo "Sample config files are automatically generated once you run the"
@@ -119,21 +91,21 @@ config:
 	@echo "system by using the 'make install-config' command."
 
 cgis:
-	cd $(SRC_CGI) && $(MAKE)
+	cd $(SRC_CGI); $(MAKE) ; cd ..
 
 html:
-	cd $(SRC_HTM) && $(MAKE)
+	cd $(SRC_HTM); $(MAKE) ; cd ..
 
 contrib:
-	cd $(SRC_CONTRIB) && $(MAKE)
+	cd $(SRC_CONTRIB); $(MAKE) ; cd ..
 
 clean:
-	cd $(SRC_BASE) && $(MAKE) $@
-	cd $(SRC_CGI) && $(MAKE) $@
-	cd $(SRC_COMMON) && $(MAKE) $@
-	cd $(SRC_XDATA) && $(MAKE) $@
-	cd $(SRC_HTM) && $(MAKE) $@
-	cd $(SRC_CONTRIB) && $(MAKE) $@
+	cd $(SRC_BASE); $(MAKE) $@ ; cd ..
+	cd $(SRC_CGI); $(MAKE) $@ ; cd ..
+	cd $(SRC_COMMON); $(MAKE) $@ ; cd ..
+	cd $(SRC_XDATA); $(MAKE) $@ ; cd ..
+	cd $(SRC_HTM); $(MAKE) $@ ; cd ..
+	cd $(SRC_CONTRIB); $(MAKE) $@ ; cd ..
 	rm -f *.cfg *.sub core
 	rm -f *~ */*~
 	rm -f $(SRC_COMMON)/config.h $(SRC_COMMON)/locations.h $(SRC_COMMON)/snprintf.h 
@@ -146,40 +118,17 @@ distclean: clean
 devclean: clean
 
 install-html:
-	cd $(SRC_HTM) && $(MAKE) install
+	cd $(SRC_HTM); $(MAKE) install ; cd ..
 
 install:
-	cd $(SRC_BASE) && $(MAKE) $@
-	cd $(SRC_CGI) && $(MAKE) $@
-	cd $(SRC_HTM) && $(MAKE) $@
+	cd $(SRC_BASE); $(MAKE) $@ ; cd ..
+	cd $(SRC_CGI); $(MAKE) $@ ; cd ..
+	cd $(SRC_HTM); $(MAKE) $@ ; cd ..
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LOGDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LOGDIR)/archives
 	if [ $(INSTALLPERLSTUFF) = yes ]; then \
 		$(INSTALL) -m 664 $(INSTALL_OPTS) p1.pl $(DESTDIR)$(BINDIR); \
 	fi;
-
-	@echo ""
-	@echo "*** Main program, CGIs and HTML files installed ***"
-	@echo ""
-	@echo "You can continue with installing Nagios as follows (type 'make'"
-	@echo "without any arguments for a list of all possible options):"
-	@echo ""
-	@echo "  make install-init"
-	@echo "     - This installs the init script in $(DESTDIR)$(INIT_DIR)"
-	@echo ""
-	@echo "  make install-commandmode"
-	@echo "     - This installs and configures permissions on the"
-	@echo "       directory for holding the external command file"
-	@echo ""
-	@echo "  make install-config"
-	@echo "     - This installs *SAMPLE* config files in $(DESTDIR)$(CFGDIR)"
-	@echo "       You'll have to modify these sample files before you can"
-	@echo "       use Nagios.  Read the HTML documentation for more info"
-	@echo "       on doing this.  Pay particular attention to the docs on"
-	@echo "       object configuration files, as they determine what/how"
-	@echo "       things get monitored!"
-	@echo ""
-
 
 install-config:
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(CFGDIR)
@@ -197,63 +146,15 @@ install-config:
 	$(INSTALL) -m 664 $(INSTALL_OPTS) sample-config/template-object/services.cfg $(DESTDIR)$(CFGDIR)/services.cfg-sample
 	$(INSTALL) -m 664 $(INSTALL_OPTS) sample-config/template-object/timeperiods.cfg $(DESTDIR)$(CFGDIR)/timeperiods.cfg-sample
 
-	@echo ""
-	@echo "*** Sample config file installed ***"
-	@echo ""
-	@echo "Remeber, these are *sample* config files.  You'll need to read"
-	@echo "the documentation for more information on how to actually define"
-	@echo "services, hosts, etc. to fit your particular needs."
-	@echo ""
-	@echo "If you have questions about configuring Nagios properly, please:"
-	@echo "       - Look at the sample config files"
-	@echo "       - Read the HTML documentation"
-	@echo "       - Read the FAQs online at http://www.nagios.org/faqs"
-	@echo "*BEFORE* you post a question to one of the mailing lists."
-	@echo ""
-
 install-init: install-daemoninit
 
 install-daemoninit:
 	$(INSTALL) -m 755 -d $(INIT_OPTS) $(DESTDIR)$(INIT_DIR)
 	$(INSTALL) -m 774 $(INIT_OPTS) daemon-init $(DESTDIR)$(INIT_DIR)/nagios
 
-	@echo ""
-	@echo "*** Init script installed ***"
-	@echo ""
-	@echo "You can continue with installing Nagios as follows (type 'make'"
-	@echo "without any arguments for a list of all possible options):"
-	@echo ""
-	@echo "  make install-commandmode"
-	@echo "     - This installs and configures permissions on the"
-	@echo "       directory for holding the external command file"
-	@echo ""
-	@echo "  make install-config"
-	@echo "     - This installs *SAMPLE* config files in $(DESTDIR)$(CFGDIR)"
-	@echo "       You'll have to modify these sample files before you can"
-	@echo "       use Nagios.  Read the HTML documentation for more info"
-	@echo "       on doing this.  Pay particular attention to the docs on"
-	@echo "       object configuration files, as they determine what/how"
-	@echo "       things get monitored!"
-	@echo ""
-
 install-commandmode:
 	$(INSTALL) -m 775 $(COMMAND_OPTS) -d $(DESTDIR)$(LOGDIR)/rw
 	chmod g+s $(DESTDIR)$(LOGDIR)/rw
-
-	@echo ""
-	@echo "*** External command directory configured ***"
-	@echo ""
-	@echo "You can continue with installing Nagios as follows (type 'make'"
-	@echo "without any arguments for a list of all possible options):"
-	@echo ""
-	@echo "  make install-config"
-	@echo "     - This installs *SAMPLE* config files in $(DESTDIR)$(CFGDIR)"
-	@echo "       You'll have to modify these sample files before you can"
-	@echo "       use Nagios.  Read the HTML documentation for more info"
-	@echo "       on doing this.  Pay particular attention to the docs on"
-	@echo "       object configuration files, as they determine what/how"
-	@echo "       things get monitored!"
-	@echo ""
 
 fullinstall: install install-init install-commandmode
 
@@ -289,7 +190,7 @@ Prototype:
 	$(INSTALL) -m 644 sample-config/template-object/misccommands.cfg $(PACKDIR)$(CFGDIR)/misccommands.cfg.$(VERSION)
 	$(INSTALL) -m 644 sample-config/template-object/services.cfg $(PACKDIR)$(CFGDIR)/services.cfg.$(VERSION)
 	$(INSTALL) -m 644 sample-config/template-object/timeperiods.cfg $(PACKDIR)$(CFGDIR)/timeperiods.cfg.$(VERSION)
-	cd contrib; $(MAKE) all; $(MAKE) DESTDIR=$(PACKDIR) INIT_OPTS='' INSTALL_OPTS='' COMMAND_OPTS='' nagios_grp='' nagios_usr='' install
+	cd contrib; $(MAKE) all; $(MAKE) DESTDIR=$(PACKDIR) INIT_OPTS='' INSTALL_OPTS='' COMMAND_OPTS='' nagios_grp='' nagios_usr='' install; cd ..
 	echo i pkginfo> Prototype
 	if [ -f checkinstall ] ; then echo i checkinstall>> Prototype; fi
 	if [ -f preinstall ] ; then echo i preinstall>> Prototype; fi
@@ -301,7 +202,7 @@ pkg/nagios/pkgmap: Prototype
 	pkgmk -o -r / -f Prototype -d $(PACKDIR) nagios
 
 nagios.SPARC.pkg.tar.gz: pkg/nagios/pkgmap
-	cd $(PACKDIR) && tar -cf - nagios | gzip -9 -c > ../nagios.SPARC.pkg.tar.gz
+	cd $(PACKDIR); tar -cf - nagios | gzip -9 -c > ../nagios.SPARC.pkg.tar.gz
 
 pkgset: nagios.SPARC.pkg.tar.gz
 

@@ -3,7 +3,7 @@
  * STATUS.C -  Nagios Status CGI
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 07-30-2002
+ * Last Modified: 07-03-2002
  *
  * License:
  * 
@@ -124,8 +124,8 @@ authdata current_authdata;
 time_t current_time;
 
 char alert_message[MAX_MESSAGE_BUFFER];
-char *host_name=NULL;
-char *hostgroup_name=NULL;
+char *host_name="all";
+char *hostgroup_name="all";
 int host_alert=FALSE;
 int show_all_hosts=TRUE;
 int show_all_hostgroups=TRUE;
@@ -452,9 +452,13 @@ int process_cgivars(void){
 				break;
 			        }
 
-			hostgroup_name=strdup(variables[x]);
+			hostgroup_name=(char *)malloc(strlen(variables[x])+1);
+			if(hostgroup_name==NULL)
+				hostgroup_name="all";
+			else
+				strcpy(hostgroup_name,variables[x]);
 
-			if(hostgroup_name!=NULL && !strcmp(hostgroup_name,"all"))
+			if(!strcmp(hostgroup_name,"all"))
 				show_all_hostgroups=TRUE;
 			else
 				show_all_hostgroups=FALSE;
@@ -469,9 +473,13 @@ int process_cgivars(void){
 				break;
 			        }
 
-			host_name=strdup(variables[x]);
+			host_name=(char *)malloc(strlen(variables[x])+1);
+			if(host_name==NULL)
+				host_name="all";
+			else
+				strcpy(host_name,variables[x]);
 
-			if(host_name!=NULL && !strcmp(host_name,"all"))
+			if(!strcmp(host_name,"all"))
 				show_all_hosts=TRUE;
 			else
 				show_all_hosts=FALSE;
@@ -585,10 +593,8 @@ int process_cgivars(void){
 		/* we found the noheader option */
 		else if(!strcmp(variables[x],"noheader"))
 			display_header=FALSE;
-	        }
 
-	/* free memory allocated to the CGI variables */
-	free_cgivars(variables);
+	        }
 
 	return error;
         }
@@ -1047,8 +1053,7 @@ void show_service_detail(void){
 
 	printf("<td valign=top align=left width=33%%>\n");
 
-	if(display_header==TRUE)
-		show_filters();
+	show_filters();
 
 	printf("</td>");
 
@@ -1429,13 +1434,9 @@ void show_service_detail(void){
 				printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s",EXTINFO_CGI,DISPLAY_SERVICE_INFO,url_encode(temp_status->host_name));
 				printf("&service=%s#comments'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='This service problem has been acknowledged'></A></TD>",url_encode(temp_status->description),url_images_path,ACKNOWLEDGEMENT_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT);
 			        }
-			if(temp_status->checks_enabled==FALSE && temp_status->accept_passive_service_checks==FALSE){
+			if(temp_status->checks_enabled==FALSE){
 				printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s",EXTINFO_CGI,DISPLAY_SERVICE_INFO,url_encode(temp_status->host_name));
-				printf("&service=%s'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='Active and passive checks have been disabled for this service'></A></TD>",url_encode(temp_status->description),url_images_path,DISABLED_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT);
-			        }
-			else if(temp_status->checks_enabled==FALSE){
-				printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s",EXTINFO_CGI,DISPLAY_SERVICE_INFO,url_encode(temp_status->host_name));
-				printf("&service=%s'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='Active checks of the service have been disabled - only passive checks are being accepted'></A></TD>",url_encode(temp_status->description),url_images_path,PASSIVE_ONLY_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT);
+				printf("&service=%s'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='Active checks of the service have been disabled'></A></TD>",url_encode(temp_status->description),url_images_path,DISABLED_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT);
 			        }
 			if(temp_status->notifications_enabled==FALSE){
 				printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s",EXTINFO_CGI,DISPLAY_SERVICE_INFO,url_encode(temp_status->host_name));
@@ -1815,7 +1816,6 @@ void show_host_detail(void){
 					printf("<TD>\n");
 				        }
 			        }
-			printf("<TD><a href='%s?host=%s'><img src='%s%s' border=0 alt='View Service Details For This Host'></a></TD>\n",STATUS_CGI,url_encode(temp_status->host_name),url_images_path,STATUS_DETAIL_ICON);
 			printf("</TR>\n");
 			printf("</TABLE>\n");
 			printf("</TD>\n");

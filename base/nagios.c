@@ -3,12 +3,12 @@
  * NAGIOS.C - Core Program Code For Nagios
  *
  * Program: Nagios
- * Version: 1.0
+ * Version: 1.0b4
  * License: GPL
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
  *
  * First Written:   01-28-1999 (start of development)
- * Last Modified:   11-24-2002
+ * Last Modified:   07-04-2002
  *
  * Description:
  *
@@ -56,7 +56,6 @@
 #ifdef EMBEDDEDPERL 
 #include <EXTERN.h>
 #include <perl.h>
-static PerlInterpreter *my_perl;
 #include <fcntl.h>
 
 /* include PERL xs_init code for module and C library support */
@@ -180,7 +179,6 @@ int             interleave_factor_method=ILF_SMART;
 
 int             command_check_interval=DEFAULT_COMMAND_CHECK_INTERVAL;
 int             service_check_reaper_interval=DEFAULT_SERVICE_REAPER_INTERVAL;
-int             max_check_reaper_time=DEFAULT_MAX_REAPER_TIME;
 int             freshness_check_interval=DEFAULT_FRESHNESS_CHECK_INTERVAL;
 
 int             non_parallelized_check_running=FALSE;

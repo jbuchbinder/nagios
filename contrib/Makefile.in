@@ -1,8 +1,4 @@
-###############################
-# Makefile for contrib software
-#
-# Last Modified: 08-25-2002
-###############################
+# Contrib Makefile - Last updated 02/18/2002
 
 CC=@CC@
 CFLAGS=@CFLAGS@ @DEFS@
@@ -62,7 +58,7 @@ ministatus.cgi: ministatus.c
 # dependencies
 
 $(CGI_O): $(CGI_C)
-	cd $(SRC_CGI) && make $(CGI_O)
+	cd $(SRC_CGI); make $(CGI_O)
 
 ##############################################################################
 # implicit rules
