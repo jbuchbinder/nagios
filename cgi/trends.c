@@ -3,7 +3,7 @@
  * TRENDS.C -  Nagios State Trends CGI
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 10-26-2002
+ * Last Modified: 08-07-2002
  *
  * License:
  * 
@@ -53,7 +53,6 @@ extern int     log_rotation_method;
 
 
 /* archived state types */
-#define AS_CURRENT_STATE        -1   /* special case for initial assumed state */
 #define AS_NO_DATA		0
 #define AS_PROGRAM_END		1
 #define AS_PROGRAM_START	2
@@ -107,7 +106,6 @@ authdata current_authdata;
 typedef struct archived_state_struct{
 	time_t  time_stamp;
 	int     entry_type;
-	int     processed_state;
 	char    *state_info;
 	struct archived_state_struct *next;
         }archived_state;
@@ -284,9 +282,8 @@ int main(int argc, char **argv){
 	        }
 
 	/* initialize time period to last 24 hours */
-	time(&current_time);
-	t2=current_time;
-	t1=(time_t)(current_time-(60*60*24));
+	time(&t2);
+	t1=(time_t)(t2-(60*60*24));
 
 	/* default number of backtracked archives */
 	switch(log_rotation_method){
@@ -345,13 +342,6 @@ int main(int argc, char **argv){
 		t3=t2;
 		t2=t1;
 		t1=t3;
-	        }
-
-	/* don't let user create reports in the future */
-	if(t2>current_time){
-		t2=current_time;
-		if(t1>t2)
-			t1=t2-(60*60*24);
 	        }
 			
 	if(mode==CREATE_HTML && display_header==TRUE){
@@ -465,7 +455,6 @@ int main(int argc, char **argv){
 			printf("<tr><td CLASS='optBoxItem' valign=top align=left>");
 			printf("<select name='initialassumedstate'>\n");
 			printf("<option value=%d %s>Unspecified\n",AS_NO_DATA,(initial_assumed_state==AS_NO_DATA)?"SELECTED":"");
-			printf("<option value=%d %s>Current State\n",AS_CURRENT_STATE,(initial_assumed_state==AS_CURRENT_STATE)?"SELECTED":"");
 			if(display_type==DISPLAY_HOST_TRENDS){
 				printf("<option value=%d %s>Host Up\n",AS_HOST_UP,(initial_assumed_state==AS_HOST_UP)?"SELECTED":"");
 				printf("<option value=%d %s>Host Down\n",AS_HOST_DOWN,(initial_assumed_state==AS_HOST_DOWN)?"SELECTED":"");
@@ -984,7 +973,6 @@ int main(int argc, char **argv){
 			printf("<td class='reportSelectItem'>\n");
 			printf("<select name='initialassumedstate'>\n");
 			printf("<option value=%d>Unspecified\n",AS_NO_DATA);
-			printf("<option value=%d>Current State\n",AS_CURRENT_STATE);
 			if(display_type==DISPLAY_HOST_TRENDS){
 				printf("<option value=%d>Host Up\n",AS_HOST_UP);
 				printf("<option value=%d>Host Down\n",AS_HOST_DOWN);
@@ -1596,12 +1584,6 @@ void graph_all_trend_data(void){
 	if(t1>current_time)
 		return;
 
-	/* find current state for host or service */
-	if(display_type==DISPLAY_HOST_TRENDS)
-		hststatus=find_hoststatus(host_name);
-	else
-		svcstatus=find_servicestatus(host_name,svc_description);
-
 
 	/************************************/
 	/* INSERT CURRENT STATE (IF WE CAN) */
@@ -1616,6 +1598,7 @@ void graph_all_trend_data(void){
 		/* we don't have any historical information, but the current time falls within the reporting period, so use */
 		/* the current status of the host/service as the starting data */
 		if(display_type==DISPLAY_HOST_TRENDS){
+			hststatus=find_hoststatus(host_name);
 			if(hststatus!=NULL){
 
 				if(hststatus->status==HOST_DOWN)
@@ -1633,6 +1616,7 @@ void graph_all_trend_data(void){
 			        }
 		        }
 		else{
+			svcstatus=find_servicestatus(host_name,svc_description);
 			if(svcstatus!=NULL){
 
 				if(svcstatus->status==SERVICE_OK || svcstatus->status==SERVICE_RECOVERY)
@@ -1663,55 +1647,12 @@ void graph_all_trend_data(void){
 		/* see if its okay to assume initial state for this subject */
 		error=FALSE;
 		if(display_type==DISPLAY_SERVICE_TRENDS){
-			if(initial_assumed_state!=AS_SVC_OK && initial_assumed_state!=AS_SVC_WARNING && initial_assumed_state!=AS_SVC_UNKNOWN && initial_assumed_state!=AS_SVC_CRITICAL && initial_assumed_state!=AS_CURRENT_STATE)
-				error=TRUE;
-			if(initial_assumed_state==AS_CURRENT_STATE && svcstatus==NULL)
+			if(initial_assumed_state!=AS_SVC_OK && initial_assumed_state!=AS_SVC_WARNING && initial_assumed_state!=AS_SVC_UNKNOWN && initial_assumed_state!=AS_SVC_CRITICAL)
 				error=TRUE;
 		        }
 		else{
-			if(initial_assumed_state!=AS_HOST_UP && initial_assumed_state!=AS_HOST_DOWN && initial_assumed_state!=AS_HOST_UNREACHABLE && initial_assumed_state!=AS_CURRENT_STATE)
+			if(initial_assumed_state!=AS_HOST_UP && initial_assumed_state!=AS_HOST_DOWN && initial_assumed_state!=AS_HOST_UNREACHABLE)
 				error=TRUE;
-			if(initial_assumed_state==AS_CURRENT_STATE && hststatus==NULL)
-				error=TRUE;
-		        }
-
-		/* get the current state if applicable */
-		if(initial_assumed_state==AS_CURRENT_STATE && error==FALSE){
-			if(display_type==DISPLAY_HOST_TRENDS){
-				switch(hststatus->status){
-				case HOST_DOWN:
-					initial_assumed_state=AS_HOST_DOWN;
-					break;
-				case HOST_UNREACHABLE:
-					initial_assumed_state=AS_HOST_UNREACHABLE;
-					break;
-				case HOST_UP:
-					initial_assumed_state=AS_HOST_UP;
-					break;
-				default:
-					error=TRUE;
-					break;
-				        }
-			        }
-			else{
-				switch(svcstatus->status){
-				case SERVICE_OK:
-					initial_assumed_state=AS_SVC_OK;
-					break;
-				case SERVICE_WARNING:
-					initial_assumed_state=AS_SVC_WARNING;
-					break;
-				case SERVICE_UNKNOWN:
-					initial_assumed_state=AS_SVC_UNKNOWN;
-					break;
-				case SERVICE_CRITICAL:
-					initial_assumed_state=AS_SVC_CRITICAL;
-					break;
-				default:
-					error=TRUE;
-					break;
-				        }
-			        }
 		        }
 
 		if(error==FALSE){
@@ -2218,7 +2159,6 @@ void add_archived_state(int state_type, time_t time_stamp, char *state_info){
 	else new_as->state_info=NULL;
 
 	new_as->entry_type=state_type;
-	new_as->processed_state=state_type;
 	new_as->time_stamp=time_stamp;
 
 	/* add the new entry to the list in memory, sorted by time */

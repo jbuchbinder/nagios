@@ -3,7 +3,7 @@
  * CGIUTILS.C - Common utilities for Nagios CGIs
  * 
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 11-10-2002
+ * Last Modified: 08-19-2002
  *
  * License:
  *
@@ -136,11 +136,7 @@ char encoded_url_string[MAX_INPUT_BUFFER];
 char encoded_html_string[MAX_INPUT_BUFFER];
 
 #ifdef HAVE_TZNAME
-#ifdef CYGWIN
-extern char     *_tzname[2] __declspec(dllimport);
-#else
 extern char     *tzname[2];
-#endif
 #endif
 
 
@@ -786,7 +782,7 @@ void get_time_string(time_t *raw_time,char *buffer,int buffer_length,int type){
 	int second;
 	int year;
 	char *weekdays[7]={"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-	char *months[12]={"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+	char *months[12]={"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sept","Oct","Nov","Dec"};
 	char *tzone="";
 
 	if(raw_time==NULL)

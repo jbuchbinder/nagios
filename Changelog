@@ -3,19 +3,6 @@ Nagios Change Log
 ###################
 
 
-1.0 - 11/24/2002
-----------------
-* Minor bug fixes in CGIs
-* Minor bug fixes in sample config files
-* Minor doc updates
-* Minor bug fixes to init script
-* Spec file updates
-* Bug fix for flex host downtime
-* Embedded perl bug fixe for arguments with spaces
-* Host escalation logic fix
-* Bug fix for PostgreSQL timestamps
-
-
 1.0b6 - 09/15/2002
 ------------------
 * Added wildcards and multiple hosts/hostgroups to host dependency

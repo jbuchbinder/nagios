@@ -3,7 +3,7 @@
  * UTILS.C - Miscellaneous utility functions for Nagios
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   11-17-2002
+ * Last Modified:   07-02-2002
  *
  * License:
  *
@@ -45,7 +45,6 @@
 #ifdef EMBEDDEDPERL
 #include <EXTERN.h>
 #include <perl.h>
-static PerlInterpreter *my_perl;
 #include <fcntl.h>
 /* In perl.h (or friends) there is a macro that defines sighandler as Perl_sighandler, so we must #undef it so we can use our sighandler() function */
 #undef sighandler
@@ -198,11 +197,7 @@ extern int      command_file_created;
 char my_system_output[MAX_INPUT_BUFFER];
 
 #ifdef HAVE_TZNAME
-#ifdef CYGWIN
-extern char     *_tzname[2] __declspec(dllimport);
-#else
 extern char     *tzname[2];
-#endif
 #endif
 
 extern service_message svc_msg;
@@ -1839,10 +1834,7 @@ int daemon_init(void){
 	lock.l_whence=SEEK_SET;
 	lock.l_len=0;
 	if(fcntl(lockfile,F_SETLK,&lock)<0){
-		if(errno==EACCES || errno==EAGAIN)
-			snprintf(temp_buffer,sizeof(temp_buffer)-1,"Lockfile '%s' is held by PID %d.  Bailing out...",lock_file,(int)lock.l_pid);
-		else
-			snprintf(temp_buffer,sizeof(temp_buffer)-1,"Cannot lock lockfile '%s': %s. Bailing out...",lock_file,strerror(errno));
+		snprintf(temp_buffer,sizeof(temp_buffer)-1,"Lockfile '%s' is held by PID %d.  Bailing out...",lock_file,(int)pid);
 		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_ERROR,TRUE);
 		cleanup();
 		exit(ERROR);
@@ -2011,7 +2003,7 @@ int read_svc_message(service_message *message){
 #endif
 
 	/* clear the message buffer */
-	bzero((void *)message,sizeof(service_message));
+	bzero(message,sizeof(service_message));
 
 	/* initialize the number of bytes to read */
 	bytes_to_read=sizeof(service_message);
