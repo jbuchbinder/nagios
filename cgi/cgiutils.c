@@ -3,7 +3,7 @@
  * CGIUTILS.C - Common utilities for Nagios CGIs
  * 
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 11-10-2002
+ * Last Modified: 07-30-2002
  *
  * License:
  *
@@ -136,11 +136,7 @@ char encoded_url_string[MAX_INPUT_BUFFER];
 char encoded_html_string[MAX_INPUT_BUFFER];
 
 #ifdef HAVE_TZNAME
-#ifdef CYGWIN
-extern char     *_tzname[2] __declspec(dllimport);
-#else
 extern char     *tzname[2];
-#endif
 #endif
 
 
@@ -355,7 +351,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			service_critical_sound=strdup(temp_buffer);
+			service_critical_sound=(char *)malloc(strlen(temp_buffer)+1);
+			if(service_critical_sound!=NULL)
+				strcpy(service_critical_sound,temp_buffer);
 		        }
 
 		else if(strstr(input_buffer,"service_warning_sound=")==input_buffer){
@@ -363,7 +361,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			service_warning_sound=strdup(temp_buffer);
+			service_warning_sound=(char *)malloc(strlen(temp_buffer)+1);
+			if(service_warning_sound!=NULL)
+				strcpy(service_warning_sound,temp_buffer);
 		        }
 
 		else if(strstr(input_buffer,"service_unknown_sound=")==input_buffer){
@@ -371,7 +371,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			service_unknown_sound=strdup(temp_buffer);
+			service_unknown_sound=(char *)malloc(strlen(temp_buffer)+1);
+			if(service_unknown_sound!=NULL)
+				strcpy(service_unknown_sound,temp_buffer);
 		        }
 
 		else if(strstr(input_buffer,"host_down_sound=")==input_buffer){
@@ -379,7 +381,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			host_down_sound=strdup(temp_buffer);
+			host_down_sound=(char *)malloc(strlen(temp_buffer)+1);
+			if(host_down_sound!=NULL)
+				strcpy(host_down_sound,temp_buffer);
 		        }
 
 		else if(strstr(input_buffer,"host_unreachable_sound=")==input_buffer){
@@ -387,7 +391,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			host_unreachable_sound=strdup(temp_buffer);
+			host_unreachable_sound=(char *)malloc(strlen(temp_buffer)+1);
+			if(host_unreachable_sound!=NULL)
+				strcpy(host_unreachable_sound,temp_buffer);
 		        }
 
 		else if(strstr(input_buffer,"normal_sound=")==input_buffer){
@@ -395,7 +401,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			normal_sound=strdup(temp_buffer);
+			normal_sound=(char *)malloc(strlen(temp_buffer)+1);
+			if(normal_sound!=NULL)
+				strcpy(normal_sound,temp_buffer);
 		        }
 
 		else if(strstr(input_buffer,"statusmap_background_image=")==input_buffer){
@@ -403,7 +411,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			statusmap_background_image=strdup(temp_buffer);
+			statusmap_background_image=(char *)malloc(strlen(temp_buffer)+1);
+			if(statusmap_background_image!=NULL)
+				strcpy(statusmap_background_image,temp_buffer);
 		        }
 
 		else if(strstr(input_buffer,"default_statusmap_layout=")==input_buffer){
@@ -423,7 +433,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			statuswrl_include=strdup(temp_buffer);
+			statuswrl_include=(char *)malloc(strlen(temp_buffer)+1);
+			if(statuswrl_include!=NULL)
+				strcpy(statuswrl_include,temp_buffer);
 		        }
 
 		else if(strstr(input_buffer,"ping_syntax=")==input_buffer){
@@ -431,7 +443,9 @@ int read_cgi_config_file(char *filename){
 			temp_buffer=strtok(NULL,"\n");
 			if(temp_buffer==NULL)
 				continue;
-			ping_syntax=strdup(temp_buffer);
+			ping_syntax=(char *)malloc(strlen(temp_buffer)+1);
+			if(ping_syntax!=NULL)
+				strcpy(ping_syntax,temp_buffer);
 		        }
 
  	        }
@@ -786,7 +800,7 @@ void get_time_string(time_t *raw_time,char *buffer,int buffer_length,int type){
 	int second;
 	int year;
 	char *weekdays[7]={"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-	char *months[12]={"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+	char *months[12]={"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sept","Oct","Nov","Dec"};
 	char *tzone="";
 
 	if(raw_time==NULL)
@@ -1255,7 +1269,7 @@ int get_nagios_process_info(void){
 			process_state=WEXITSTATUS(result);
 
 			/* do some basic bounds checking on the return code */
-			if(process_state<-1 || process_state>3)
+			if(process_state<-1 || process_state>2)
 				process_state=STATE_UNKNOWN;
 
 			/* check the output from the command */

@@ -3,7 +3,7 @@
  * STATUSDATA.C - External status data for Nagios CGIs
  *
  * Copyright (c) 2000-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   08-19-2002
+ * Last Modified:   04-20-2002
  *
  * License:
  *
@@ -437,7 +437,7 @@ int add_host_status(char *host_name,char *status_string,time_t last_update,time_
 		return ERROR;
 
 	/* host name */
-	new_hoststatus->host_name=strdup(host_name);
+	new_hoststatus->host_name=(char *)malloc(strlen(host_name)+1);
 	if(new_hoststatus->host_name==NULL){
 		free(new_hoststatus);
 		return ERROR;
@@ -498,12 +498,13 @@ int add_host_status(char *host_name,char *status_string,time_t last_update,time_
 	new_hoststatus->process_performance_data=(process_performance_data>0)?TRUE:FALSE;
 
 	/* plugin output */
-	new_hoststatus->information=strdup(plugin_output);
+	new_hoststatus->information=(char *)malloc(strlen(plugin_output)+1);
 	if(new_hoststatus->information==NULL){
 		free(new_hoststatus->host_name);
 		free(new_hoststatus);
 		return ERROR;
 	        }
+	strcpy(new_hoststatus->information,plugin_output);
 
 
 
@@ -619,19 +620,21 @@ int add_service_status(char *host_name,char *svc_description,char *status_string
 		return ERROR;
 
 	/* host name */
-	new_svcstatus->host_name=strdup(host_name);
+	new_svcstatus->host_name=(char *)malloc(strlen(host_name)+1);
 	if(new_svcstatus->host_name==NULL){
 		free(new_svcstatus);
 		return ERROR;
 	        }
+	strcpy(new_svcstatus->host_name,host_name);
 
 	/* service description */
-	new_svcstatus->description=strdup(svc_description);
+	new_svcstatus->description=(char *)malloc(strlen(svc_description)+1);
 	if(new_svcstatus->description==NULL){
 		free(new_svcstatus->host_name);
 		free(new_svcstatus);
 		return ERROR;
 	        }
+	strcpy(new_svcstatus->description,svc_description);
 
 	/* status */
 	new_svcstatus->status=status;
@@ -700,13 +703,14 @@ int add_service_status(char *host_name,char *svc_description,char *status_string
 	new_svcstatus->obsess_over_service=(obsess_over_service>0)?TRUE:FALSE;
 
 	/* plugin output */
-	new_svcstatus->information=strdup(plugin_output);
+	new_svcstatus->information=(char *)malloc(strlen(plugin_output)+1);
 	if(new_svcstatus->information==NULL){
 		free(new_svcstatus->description);
 		free(new_svcstatus->host_name);
 		free(new_svcstatus);
 		return ERROR;
 	        }
+	strcpy(new_svcstatus->information,plugin_output);
 
 	/* latency and execution time */
 	new_svcstatus->latency=latency;
