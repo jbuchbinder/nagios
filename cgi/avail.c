@@ -3,7 +3,7 @@
  * AVAIL.C -  Nagios Availability CGI
  *
  * Copyright (c) 2000-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 10-26-2002
+ * Last Modified: 05-22-2002
  *
  * License:
  * 
@@ -52,7 +52,6 @@ extern int       log_rotation_method;
 
 
 /* archived state types */
-#define AS_CURRENT_STATE        -1   /* special case for initial assumed state */
 #define AS_NO_DATA		0
 #define AS_PROGRAM_END		1
 #define AS_PROGRAM_START	2
@@ -293,9 +292,8 @@ int main(int argc, char **argv){
                 }
 
 	/* initialize time period to last 24 hours */
-	time(&current_time);
-	t2=current_time;
-	t1=(time_t)(current_time-(60*60*24));
+	time(&t2);
+	t1=(time_t)(t2-(60*60*24));
 
 	/* default number of backtracked archives */
 	switch(log_rotation_method){
@@ -333,13 +331,6 @@ int main(int argc, char **argv){
 		t3=t2;
 		t2=t1;
 		t1=t3;
-	        }
-			
-	/* don't let user create reports in the future */
-	if(t2>current_time){
-		t2=current_time;
-		if(t1>t2)
-			t1=t2-(60*60*24);
 	        }
 			
 	if(display_header==TRUE){
@@ -481,7 +472,6 @@ int main(int argc, char **argv){
 			printf("<td valign=top align=left class='optBoxItem'>\n");
 			printf("<select name='initialassumedstate'>\n");
 			printf("<option value=%d %s>Unspecified\n",AS_NO_DATA,(initial_assumed_state==AS_NO_DATA)?"SELECTED":"");
-			printf("<option value=%d %s>Current State\n",AS_CURRENT_STATE,(initial_assumed_state==AS_CURRENT_STATE)?"SELECTED":"");
 			if(display_type==DISPLAY_HOST_AVAIL || display_type==DISPLAY_HOSTGROUP_AVAIL){
 				printf("<option value=%d %s>Host Up\n",AS_HOST_UP,(initial_assumed_state==AS_HOST_UP)?"SELECTED":"");
 				printf("<option value=%d %s>Host Down\n",AS_HOST_DOWN,(initial_assumed_state==AS_HOST_DOWN)?"SELECTED":"");
@@ -679,7 +669,6 @@ int main(int argc, char **argv){
 		printf("<td class='reportSelectItem'>\n");
 		printf("<select name='initialassumedstate'>\n");
 		printf("<option value=%d>Unspecified\n",AS_NO_DATA);
-		printf("<option value=%d>Current State\n",AS_CURRENT_STATE);
 		if(display_type!=DISPLAY_SERVICE_AVAIL){
 			printf("<option value=%d>Host Up\n",AS_HOST_UP);
 			printf("<option value=%d>Host Down\n",AS_HOST_DOWN);
@@ -1424,9 +1413,6 @@ int process_cgivars(void){
 
 	        }
 
-	/* free memory allocated to the CGI variables */
-	free_cgivars(variables);
-
 	return error;
         }
 
@@ -1469,11 +1455,6 @@ void compute_subject_availability(avail_subject *subject, time_t current_time){
 	if(t1>current_time)
 		return;
 
-	/* get current state of host or service if possible */
-	if(subject->type==HOST_SUBJECT)
-		hststatus=find_hoststatus(subject->host_name);
-	else
-		svcstatus=find_servicestatus(subject->host_name,subject->service_description);
 
 
 	/************************************/
@@ -1488,6 +1469,7 @@ void compute_subject_availability(avail_subject *subject, time_t current_time){
 		/* we don't have any historical information, but the current time falls within the reporting period, so use */
 		/* the current status of the host/service as the starting data */
 		if(subject->type==HOST_SUBJECT){
+			hststatus=find_hoststatus(subject->host_name);
 			if(hststatus!=NULL){
 
 				if(hststatus->status==HOST_DOWN)
@@ -1510,6 +1492,7 @@ void compute_subject_availability(avail_subject *subject, time_t current_time){
 			        }
 		        }
 		else{
+			svcstatus=find_servicestatus(subject->host_name,subject->service_description);
 			if(svcstatus!=NULL){
 
 				if(svcstatus->status==SERVICE_OK || svcstatus->status==SERVICE_RECOVERY)
@@ -1546,59 +1529,16 @@ void compute_subject_availability(avail_subject *subject, time_t current_time){
 		/* see if its okay to assume initial state for this subject */
 		error=FALSE;
 		if(display_type==DISPLAY_SERVICE_AVAIL){
-			if(initial_assumed_state!=AS_SVC_OK && initial_assumed_state!=AS_SVC_WARNING && initial_assumed_state!=AS_SVC_UNKNOWN && initial_assumed_state!=AS_SVC_CRITICAL && initial_assumed_state!=AS_CURRENT_STATE)
+			if(initial_assumed_state!=AS_SVC_OK && initial_assumed_state!=AS_SVC_WARNING && initial_assumed_state!=AS_SVC_UNKNOWN && initial_assumed_state!=AS_SVC_CRITICAL)
 				error=TRUE;
 			if(subject->type!=SERVICE_SUBJECT)
 				error=TRUE;
-			if(initial_assumed_state==AS_CURRENT_STATE && svcstatus==NULL)
-				error=TRUE;
 		        }
 		else{
-			if(initial_assumed_state!=AS_HOST_UP && initial_assumed_state!=AS_HOST_DOWN && initial_assumed_state!=AS_HOST_UNREACHABLE && initial_assumed_state!=AS_CURRENT_STATE)
+			if(initial_assumed_state!=AS_HOST_UP && initial_assumed_state!=AS_HOST_DOWN && initial_assumed_state!=AS_HOST_UNREACHABLE)
 				error=TRUE;
 			if(subject->type!=HOST_SUBJECT)
 				error=TRUE;
-			if(initial_assumed_state==AS_CURRENT_STATE && hststatus==NULL)
-				error=TRUE;
-		        }
-
-		/* get the current state if applicable */
-		if(initial_assumed_state==AS_CURRENT_STATE && error==FALSE){
-			if(display_type==DISPLAY_SERVICE_AVAIL){
-				switch(svcstatus->status){
-				case SERVICE_OK:
-					initial_assumed_state=AS_SVC_OK;
-					break;
-				case SERVICE_WARNING:
-					initial_assumed_state=AS_SVC_WARNING;
-					break;
-				case SERVICE_UNKNOWN:
-					initial_assumed_state=AS_SVC_UNKNOWN;
-					break;
-				case SERVICE_CRITICAL:
-					initial_assumed_state=AS_SVC_CRITICAL;
-					break;
-				default:
-					error=TRUE;
-					break;
-				        }
-			        }
-			else{
-				switch(hststatus->status){
-				case HOST_DOWN:
-					initial_assumed_state=AS_HOST_DOWN;
-					break;
-				case HOST_UNREACHABLE:
-					initial_assumed_state=AS_HOST_UNREACHABLE;
-					break;
-				case HOST_UP:
-					initial_assumed_state=AS_HOST_UP;
-					break;
-				default:
-					error=TRUE;
-					break;
-				        }
-			        }
 		        }
 
 		if(error==FALSE){
@@ -2390,7 +2330,7 @@ void add_archived_state(int state_type, time_t time_stamp, char *state_info, ava
 	/* add the new entry to the list in memory, sorted by time (more recent entries should appear towards end of list) */
 	last_as=subject->as_list;
 	for(temp_as=subject->as_list;temp_as!=NULL;temp_as=temp_as->next){
-		if(new_as->time_stamp<temp_as->time_stamp){
+		if(new_as->time_stamp<=temp_as->time_stamp){
 			new_as->next=temp_as;
 			if(temp_as==subject->as_list)
 				subject->as_list=new_as;
@@ -3379,7 +3319,7 @@ void display_host_availability(void){
 
 		printf("<tr><td colspan=3></td></tr>\n");
 
-		printf("<tr CLASS='dataEven'><td CLASS='dataEven'>All</td><td class='dataEven'>Total</td><td CLASS='dataEven'>%s</td><td CLASS='dataEven'>100.000%%</td><td CLASS='dataEven'>100.000%%</td></tr>\n",total_time_string);
+		printf("<tr CLASS='dataEven'><td CLASS='dataEven'>All</td><td CLASS='dataEven'>%s</td><td CLASS='dataEven'>100.000%%</td><td CLASS='dataEven'>100.000%%</td></tr>\n",total_time_string);
 		printf("</table>\n");
 		printf("</DIV>\n");
 

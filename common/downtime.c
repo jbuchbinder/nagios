@@ -3,7 +3,7 @@
  * DOWNTIME.C - Scheduled downtime functions for Nagios
  *
  * Copyright (c) 2000-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   10-16-2002
+ * Last Modified:   05-08-2002
  *
  * License:
  *
@@ -223,9 +223,12 @@ int unschedule_downtime(int type,int downtime_id){
 			        }
 		        }
 		free(temp_downtime->host_name);
-		free(temp_downtime->service_description);
-		free(temp_downtime->comment);
-		free(temp_downtime->author);
+		if(temp_downtime->service_description!=NULL)
+			free(temp_downtime->service_description);
+		if(temp_downtime->comment!=NULL)
+			free(temp_downtime->comment);
+		if(temp_downtime->author!=NULL)
+			free(temp_downtime->author);
 		free(temp_downtime);
 	        }
 
@@ -414,16 +417,12 @@ int handle_scheduled_downtime(scheduled_downtime *temp_downtime){
 		/* delete downtime entry from the log */
 		delete_downtime(temp_downtime->type,temp_downtime->downtime_id);
 
-		/* decrement pending flex downtime if necessary (there really isn't any reason these counters are necessary, so remove them in 2.0 - 11/16/02 EG) ... */
+		/* decrement pending flex downtime if necessary ... */
 		if(temp_downtime->fixed==FALSE && temp_downtime->incremented_pending_downtime==TRUE){
-			if(temp_downtime->type==HOST_DOWNTIME){
-				if(hst->pending_flex_downtime>0)
-					hst->pending_flex_downtime--;
-			        }
-			else{
-				if(svc->pending_flex_downtime>0)
-					svc->pending_flex_downtime--;
-			        }
+			if(temp_downtime->type==HOST_DOWNTIME)
+				hst->pending_flex_downtime--;
+			else
+				svc->pending_flex_downtime--;
 		        }
 
 		/* delete downtime entry from list in memory */
@@ -437,9 +436,12 @@ int handle_scheduled_downtime(scheduled_downtime *temp_downtime){
 			                }
 		                }
 			free(temp_downtime->host_name);
-			free(temp_downtime->service_description);
-			free(temp_downtime->comment);
-			free(temp_downtime->author);
+			if(temp_downtime->service_description!=NULL)
+				free(temp_downtime->service_description);
+			if(temp_downtime->comment!=NULL)
+				free(temp_downtime->comment);
+			if(temp_downtime->author!=NULL)
+				free(temp_downtime->author);
 			free(temp_downtime);
 	                }
 
@@ -505,7 +507,7 @@ int handle_scheduled_downtime(scheduled_downtime *temp_downtime){
 
 
 /* checks for flexible (non-fixed) host downtime that should start now */
-int check_pending_flex_host_downtime(host *hst,int state){
+int check_pending_flex_host_downtime(host *hst){
 	scheduled_downtime *temp_downtime;
 	time_t current_time;
 
@@ -519,7 +521,7 @@ int check_pending_flex_host_downtime(host *hst,int state){
 	time(&current_time);
 
 	/* if host is currently up, nothing to do */
-	if(state==HOST_UP)
+	if(hst->status==HOST_UP)
 		return OK;
 
 	/* check all downtime entries */
@@ -538,7 +540,7 @@ int check_pending_flex_host_downtime(host *hst,int state){
 		if(find_host(temp_downtime->host_name,NULL)==hst){
 			
 			/* if the time boundaries are okay, start this scheduled downtime */
-			if(temp_downtime->start_time<=current_time && current_time<=temp_downtime->end_time){
+			if(temp_downtime->start_time>=current_time && current_time<=temp_downtime->end_time){
 				temp_downtime->start_flex_downtime=TRUE;
 				handle_scheduled_downtime(temp_downtime);
 			        }
@@ -637,9 +639,12 @@ int check_for_expired_downtime(void){
 
 			/* free memory allocated to the entry */
 			free(temp_downtime->host_name);
-			free(temp_downtime->service_description);
-			free(temp_downtime->comment);
-			free(temp_downtime->author);
+			if(temp_downtime->service_description!=NULL)
+				free(temp_downtime->service_description);
+			if(temp_downtime->comment!=NULL)
+				free(temp_downtime->comment);
+			if(temp_downtime->author!=NULL)
+				free(temp_downtime->author);
 			free(temp_downtime);
 		        }
 
@@ -820,32 +825,40 @@ int add_downtime(int downtime_type, char *host_name, char *svc_description, time
 	if(new_downtime==NULL)
 		return ERROR;
 
-	new_downtime->host_name=strdup(host_name);
+	new_downtime->host_name=(char *)malloc(strlen(host_name)+1);
 	if(new_downtime->host_name==NULL){
 		free(new_downtime);
 		return ERROR;
 	        }
+	strcpy(new_downtime->host_name,host_name);
 
 	if(downtime_type==SERVICE_DOWNTIME){
-		new_downtime->service_description=strdup(svc_description);
+		new_downtime->service_description=(char *)malloc(strlen(svc_description)+1);
 		if(new_downtime->service_description==NULL){
 			free(new_downtime->host_name);
 			free(new_downtime);
 			return ERROR;
 		        }
+		strcpy(new_downtime->service_description,svc_description);
 	        }
 	else
 		new_downtime->service_description=NULL;
 
 	if(author==NULL)
 		new_downtime->author=NULL;
-	else
-		new_downtime->author=strdup(author);
+	else{
+		new_downtime->author=(char *)malloc(strlen(author)+1);
+		if(new_downtime->author!=NULL)
+			strcpy(new_downtime->author,author);
+	        }
 
 	if(comment==NULL)
 		new_downtime->comment=NULL;
-	else
-		new_downtime->comment=strdup(comment);
+	else{
+		new_downtime->comment=(char *)malloc(strlen(comment)+1);
+		if(new_downtime->comment!=NULL)
+			strcpy(new_downtime->comment,comment);
+	        }
 
 	new_downtime->type=downtime_type;
 	new_downtime->entry_time=entry_time;
@@ -939,7 +952,8 @@ void free_downtime_data(void){
 	for(this_downtime=scheduled_downtime_list;this_downtime!=NULL;this_downtime=next_downtime){
 		next_downtime=this_downtime->next;
 		free(this_downtime->host_name);
-		free(this_downtime->service_description);
+		if(this_downtime->service_description!=NULL)
+			free(this_downtime->service_description);
 		free(this_downtime);
 	        }
 

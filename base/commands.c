@@ -3,7 +3,7 @@
  * COMMANDS.C - External command functions for Nagios
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   11-13-2002
+ * Last Modified:   01-21-2002
  *
  * License:
  *
@@ -743,7 +743,7 @@ int cmd_delay_notification(int cmd,char *args){
 	printf("cmd_delay_notification() start\n");
 #endif
 
-	/* get the host name */
+	/* get the host nmae */
 	host_name=my_strtok(args,";");
 	if(host_name==NULL)
 		return ERROR;
@@ -778,10 +778,11 @@ int cmd_delay_notification(int cmd,char *args){
 
 	/* delay the next notification... */
 	if(cmd==CMD_DELAY_HOST_NOTIFICATION)
-		temp_host->next_host_notification=delay_time;
+		temp_host->last_host_notification=delay_time;
 	else
-		temp_service->next_notification=delay_time;
+		temp_service->last_notification=delay_time;
 	
+
 #ifdef DEBUG0
 	printf("cmd_delay_notification() end\n");
 #endif
@@ -2860,9 +2861,6 @@ void process_passive_service_checks(void){
 		this_pcr=passive_check_result_list;
 		while(this_pcr!=NULL){
 			next_pcr=this_pcr->next;
-			free(this_pcr->host_name);
-			free(this_pcr->svc_description);
-			free(this_pcr->output);
 			free(this_pcr);
 			this_pcr=next_pcr;
 	                }
@@ -2878,9 +2876,6 @@ void process_passive_service_checks(void){
 	this_pcr=passive_check_result_list;
 	while(this_pcr!=NULL){
 		next_pcr=this_pcr->next;
-		free(this_pcr->host_name);
-		free(this_pcr->svc_description);
-		free(this_pcr->output);
 		free(this_pcr);
 		this_pcr=next_pcr;
 	        }
