@@ -3,7 +3,7 @@
  * EXTINFO.C -  Nagios Extended Information CGI
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 08-27-2002
+ * Last Modified: 05-14-2002
  *
  * License:
  * 
@@ -487,9 +487,11 @@ int process_cgivars(void){
 				break;
 			        }
 
-			host_name=strdup(variables[x]);
+			host_name=(char *)malloc(strlen(variables[x])+1);
 			if(host_name==NULL)
 				host_name="";
+			else
+				strcpy(host_name,variables[x]);
 			}
 
 		/* we found the hostgroup name */
@@ -500,9 +502,11 @@ int process_cgivars(void){
 				break;
 			        }
 
-			hostgroup_name=strdup(variables[x]);
+			hostgroup_name=(char *)malloc(strlen(variables[x])+1);
 			if(hostgroup_name==NULL)
 				hostgroup_name="";
+			else
+				strcpy(hostgroup_name,variables[x]);
 			}
 
 		/* we found the service name */
@@ -513,9 +517,11 @@ int process_cgivars(void){
 				break;
 			        }
 
-			service_desc=strdup(variables[x]);
+			service_desc=(char *)malloc(strlen(variables[x])+1);
 			if(service_desc==NULL)
 				service_desc="";
+			else
+				strcpy(service_desc,variables[x]);
 			}
 
 		/* we found the sort type argument */
@@ -548,9 +554,6 @@ int process_cgivars(void){
 		else if(!strcmp(variables[x],"noheader"))
 			display_header=FALSE;
 	        }
-
-	/* free memory allocated to the CGI variables */
-	free_cgivars(variables);
 
 	return error;
         }
@@ -936,13 +939,13 @@ void show_host_info(void){
 		printf("<TR><TD class='stateInfoTable2'>\n");
 		printf("<TABLE BORDER=0>\n");
 
-		printf("<TR><TD CLASS='dataVar'>Host Checks:</TD><TD CLASS='dataVal'><DIV CLASS='checks%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_hoststatus->checks_enabled==TRUE)?"ENABLED":"DISABLED",(temp_hoststatus->checks_enabled==TRUE)?"ENABLED":"DISABLED");
+		printf("<TR><TD CLASS='dataVar'>Host Checks Enabled?</TD><TD CLASS='dataVal'><DIV CLASS='checks%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_hoststatus->checks_enabled==TRUE)?"ENABLED":"DISABLED",(temp_hoststatus->checks_enabled==TRUE)?"YES":"NO");
 
-		printf("<TR><TD CLASS='dataVar'>Host Notifications:</td><td CLASS='dataVal'><DIV CLASS='notifications%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></td></tr>\n",(temp_hoststatus->notifications_enabled)?"ENABLED":"DISABLED",(temp_hoststatus->notifications_enabled)?"ENABLED":"DISABLED");
+		printf("<TR><TD CLASS='dataVar'>Host Notifications Enabled?</td><td CLASS='dataVal'><DIV CLASS='notifications%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></td></tr>\n",(temp_hoststatus->notifications_enabled)?"ENABLED":"DISABLED",(temp_hoststatus->notifications_enabled)?"YES":"NO");
 
-		printf("<TR><TD CLASS='dataVar'>Event Handler:</td><td CLASS='dataVal'><DIV CLASS='eventhandlers%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></td></tr>\n",(temp_hoststatus->event_handler_enabled)?"ENABLED":"DISABLED",(temp_hoststatus->event_handler_enabled)?"ENABLED":"DISABLED");
+		printf("<TR><TD CLASS='dataVar'>Event Handler Enabled?</td><td CLASS='dataVal'><DIV CLASS='eventhandlers%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></td></tr>\n",(temp_hoststatus->event_handler_enabled)?"ENABLED":"DISABLED",(temp_hoststatus->event_handler_enabled)?"YES":"NO");
 
-		printf("<TR><TD CLASS='dataVar'>Flap Detection:</td><td CLASS='dataVal'><DIV CLASS='flapdetection%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></td></tr>\n",(temp_hoststatus->flap_detection_enabled==TRUE)?"ENABLED":"DISABLED",(temp_hoststatus->flap_detection_enabled==TRUE)?"ENABLED":"DISABLED");
+		printf("<TR><TD CLASS='dataVar'>Flap Detection Enabled?</td><td CLASS='dataVal'><DIV CLASS='flapdetection%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></td></tr>\n",(temp_hoststatus->flap_detection_enabled==TRUE)?"ENABLED":"DISABLED",(temp_hoststatus->flap_detection_enabled==TRUE)?"YES":"NO");
 
 		printf("</TABLE>\n");
 		printf("</TD></TR>\n");
@@ -956,6 +959,45 @@ void show_host_info(void){
 
 	printf("<TD ALIGN=CENTER VALIGN=TOP>\n");
 	printf("<TABLE BORDER=0 CELLPADDING=0 CELLSPACING=0><TR>\n");
+
+#ifdef USE_OLDCRUD
+	printf("<TD ALIGN=CENTER VALIGN=TOP CLASS='stateStatisticsPanel'>\n");
+
+	printf("<DIV CLASS='dataTitle'>Host State Statistics</DIV>\n");
+
+	if(temp_hoststatus->last_check==0L)
+		printf("<P><DIV ALIGN=CENTER>This host has not yet been checked, so state statistics are not available.</DIV></P>\n");
+
+	else{
+
+		/* calculate host state times */
+		calculate_host_state_times(temp_host->name,&total_monitored_time,&time_up,&percent_time_up,&time_down,&percent_time_down,&time_unreachable,&percent_time_unreachable);
+
+		get_time_breakdown(total_monitored_time,&days,&hours,&minutes,&seconds);
+		snprintf(total_time_string,sizeof(total_time_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+		get_time_breakdown(time_up,&days,&hours,&minutes,&seconds);
+		snprintf(time_up_string,sizeof(time_up_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+		get_time_breakdown(time_down,&days,&hours,&minutes,&seconds);
+		snprintf(time_down_string,sizeof(time_down_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+		get_time_breakdown(time_unreachable,&days,&hours,&minutes,&seconds);
+		snprintf(time_unreachable_string,sizeof(time_unreachable_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+
+		printf("<TABLE BORDER=0 CLASS='data'>\n");
+		printf("<TR><TH CLASS='data'>State</TH><TH CLASS='data'>Time</TH><TH CLASS='data'>%% Time</TH></TR>\n");
+
+		printf("<tr CLASS='dataEven'><td CLASS='hostUP'>UP</td><td CLASS='dataEven'>%s</td><td CLASS='dataEven'>%2.1f%%</td></tr>\n",time_up_string,percent_time_up);
+		printf("<tr CLASS='dataOdd'><td CLASS='hostDOWN'>DOWN</td><td CLASS='dataOdd'>%s</td><td CLASS='dataOdd'>%2.1f%%</td></tr>\n",time_down_string,percent_time_down);
+		printf("<tr CLASS='dataEven'><td CLASS='hostUNREACHABLE'>UNREACHABLE</td><td CLASS='dataEven'>%s</td><td CLASS='dataEven'>%2.1f%%</td></tr>\n",time_unreachable_string,percent_time_unreachable);
+
+		printf("<tr><td colspan=3></td></tr>\n");
+		printf("<tr CLASS='dataOdd'><td CLASS='dataOdd'>All States</td><td CLASS='dataOdd'>%s</td><td CLASS='dataOdd'>100.0%%</td></tr>\n",total_time_string);
+		printf("</table>\n");
+		}
+
+	printf("</TD>\n");
+
+	printf("</TR><TR>\n");
+#endif
 
 	printf("<TD ALIGN=CENTER VALIGN=TOP CLASS='commandPanel'>\n");
 
@@ -972,6 +1014,7 @@ void show_host_info(void){
 		else
 			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Enable Checks Of This Host'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s'>Enable checks of this host</a></td></tr>\n",url_images_path,ENABLED_ICON,COMMAND_CGI,CMD_ENABLE_HOST_CHECK,url_encode(host_name));
 
+		/*if(temp_hoststatus->status!=HOST_UP && temp_hoststatus->last_notification!=(time_t)0){*/
 		if(temp_hoststatus->status==HOST_DOWN || temp_hoststatus->status==HOST_UNREACHABLE){
 			if(temp_hoststatus->problem_has_been_acknowledged==FALSE)
 				printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Acknowledge This Host Problem'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s'>Acknowledge this host problem</a></td></tr>\n",url_images_path,ACKNOWLEDGEMENT_ICON,COMMAND_CGI,CMD_ACKNOWLEDGE_HOST_PROBLEM,url_encode(host_name));
@@ -1240,15 +1283,15 @@ void show_service_info(void){
 		printf("<TR><TD class='stateInfoTable2'>\n");
 		printf("<TABLE BORDER=0>\n");
 
-		printf("<TR><TD CLASS='dataVar'>Service Checks:</TD><td CLASS='dataVal'><DIV CLASS='checks%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->checks_enabled)?"ENABLED":"DISABLED",(temp_svcstatus->checks_enabled)?"ENABLED":"DISABLED");
+		printf("<TR><TD CLASS='dataVar'>Service Checks Enabled?</TD><td CLASS='dataVal'><DIV CLASS='checks%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->checks_enabled)?"ENABLED":"DISABLED",(temp_svcstatus->checks_enabled)?"YES":"NO");
 
-		printf("<TR><TD CLASS='dataVar'>Passive Checks:</TD><td CLASS='dataVal'><DIV CLASS='checks%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->accept_passive_service_checks==TRUE)?"ENABLED":"DISABLED",(temp_svcstatus->accept_passive_service_checks)?"ENABLED":"DISABLED");
+		printf("<TR><TD CLASS='dataVar'>Passive Checks Being Accepted?</TD><td CLASS='dataVal'><DIV CLASS='checks%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->accept_passive_service_checks==TRUE)?"ENABLED":"DISABLED",(temp_svcstatus->accept_passive_service_checks)?"YES":"NO");
 
-		printf("<TR><td CLASS='dataVar'>Service Notifications:</TD><td CLASS='dataVal'><DIV CLASS='notifications%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->notifications_enabled)?"ENABLED":"DISABLED",(temp_svcstatus->notifications_enabled)?"ENABLED":"DISABLED");
+		printf("<TR><td CLASS='dataVar'>Service Notifications Enabled?</TD><td CLASS='dataVal'><DIV CLASS='notifications%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->notifications_enabled)?"ENABLED":"DISABLED",(temp_svcstatus->notifications_enabled)?"YES":"NO");
 
-		printf("<TR><TD CLASS='dataVar'>Event Handler:</TD><td CLASS='dataVal'><DIV CLASS='eventhandlers%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->event_handler_enabled)?"ENABLED":"DISABLED",(temp_svcstatus->event_handler_enabled)?"ENABLED":"DISABLED");
+		printf("<TR><TD CLASS='dataVar'>Event Handler Enabled?</TD><td CLASS='dataVal'><DIV CLASS='eventhandlers%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->event_handler_enabled)?"ENABLED":"DISABLED",(temp_svcstatus->event_handler_enabled)?"YES":"NO");
 
-		printf("<TR><TD CLASS='dataVar'>Flap Detection:</TD><td CLASS='dataVal'><DIV CLASS='flapdetection%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->flap_detection_enabled==TRUE)?"ENABLED":"DISABLED",(temp_svcstatus->flap_detection_enabled==TRUE)?"ENABLED":"DISABLED");
+		printf("<TR><TD CLASS='dataVar'>Flap Detection Enabled?</TD><td CLASS='dataVal'><DIV CLASS='flapdetection%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",(temp_svcstatus->flap_detection_enabled==TRUE)?"ENABLED":"DISABLED",(temp_svcstatus->flap_detection_enabled==TRUE)?"YES":"NO");
 
 
 		printf("</TABLE>\n");
@@ -1265,6 +1308,53 @@ void show_service_info(void){
 	printf("<TD ALIGN=CENTER VALIGN=TOP>\n");
 	printf("<TABLE BORDER=0 CELLPADDING=0 CELLSPACING=0><TR>\n");
 
+#ifdef USE_OLDCRUD
+	printf("<TD ALIGN=CENTER VALIGN=TOP CLASS='stateStatisticsPanel'>\n");
+
+	printf("<DIV CLASS='dataTitle'>Service State Statistics</DIV>\n");
+
+	if(temp_svcstatus->last_check==0L)
+		printf("<P><DIV ALIGN=CENTER>This service has not yet been checked, so state statistics are not available.</DIV></P>\n");
+
+	else{
+
+		/* calculate service state times */
+		calculate_service_state_times(temp_service->host_name,temp_service->description,&total_monitored_time,&time_ok,&percent_time_ok,&time_warning,&percent_time_warning,&time_unknown,&percent_time_unknown,&time_critical,&percent_time_critical);
+
+		get_time_breakdown(time_ok,&days,&hours,&minutes,&seconds);
+		snprintf(time_ok_string,sizeof(time_ok_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+		get_time_breakdown(time_warning,&days,&hours,&minutes,&seconds);
+		snprintf(time_warning_string,sizeof(time_warning_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+		get_time_breakdown(time_unknown,&days,&hours,&minutes,&seconds);
+		snprintf(time_unknown_string,sizeof(time_unknown_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+		get_time_breakdown(time_critical,&days,&hours,&minutes,&seconds);
+		snprintf(time_critical_string,sizeof(time_critical_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+
+		get_time_breakdown(total_monitored_time,&days,&hours,&minutes,&seconds);
+		snprintf(total_time_string,sizeof(total_time_string)-1,"%dd %dh %dm %ds",days,hours,minutes,seconds);
+
+		printf("<TABLE BORDER=0 CLASS='data'>\n");
+		printf("<TR><TH CLASS='data'>State</TH><TH CLASS='data'>Time</TH><TH CLASS='data'>%% Time</TH></TR>\n");
+
+		printf("<tr CLASS='dataEven'><td CLASS='serviceOK'>OK</td><td CLASS='dataEven'>%s</td><td CLASS='dataEven'>%2.1f%%</td></tr>\n",time_ok_string,percent_time_ok);
+		printf("<tr CLASS='dataOdd'><td CLASS='serviceWARNING'>WARNING</td><td CLASS='dataOdd'>%s</td><td CLASS='dataOdd'>%2.1f%%</td></tr>\n",time_warning_string,percent_time_warning);
+		printf("<tr CLASS='dataEven'><td CLASS='serviceUNKNOWN'>UNKNOWN</td><td CLASS='dataEven'>%s</td><td CLASS='dataEven'>%2.1f%%</td></tr>\n",time_unknown_string,percent_time_unknown);
+		printf("<tr CLASS='dataOdd'><td CLASS='serviceCRITICAL'>CRITICAL</td><td CLASS='dataOdd'>%s</td><td CLASS='dataOdd'>%2.1f%%</td></tr>\n",time_critical_string,percent_time_critical);
+
+		printf("<tr><td colspan=3></td></tr>\n");
+		printf("<tr CLASS='dataEven'><td CLASS='dataEven'>All States</td><td CLASS='dataEven'>%s</td><td CLASS='dataEven'>100.0%%</td></tr>\n",total_time_string);
+		printf("</table>\n");
+
+		if(temp_svcstatus->state_type==SOFT_STATE)
+			printf("<P><DIV ALIGN=CENTER>NOTE: This service is currently in a soft state, so the state statistics may be temporarily inaccurate.  When the service returns to a hard state, the statistics will be correct.</DIV></P>\n");
+		}
+
+	printf("</TD>\n");
+
+	printf("</TR>\n");
+	printf("<TR>\n");
+#endif
+
 	printf("<TD ALIGN=CENTER VALIGN=TOP CLASS='commandPanel'>\n");
 
 	printf("<DIV CLASS='dataTitle'>Service Commands</DIV>\n");
@@ -1277,6 +1367,38 @@ void show_service_info(void){
 
 		if(temp_svcstatus->checks_enabled){
 
+			/*if(temp_svcstatus->status!=SERVICE_OK && temp_svcstatus->status!=SERVICE_RECOVERY && temp_svcstatus->status!=SERVICE_PENDING && temp_svcstatus->state_type==HARD_STATE && temp_svcstatus->last_notification!=(time_t)0){*/
+			if((temp_svcstatus->status==SERVICE_WARNING || temp_svcstatus->status==SERVICE_UNKNOWN || temp_svcstatus->status==SERVICE_CRITICAL) && temp_svcstatus->state_type==HARD_STATE){
+				if(temp_svcstatus->problem_has_been_acknowledged==FALSE){
+					printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Acknowledge This Service Problem'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,ACKNOWLEDGEMENT_ICON,COMMAND_CGI,CMD_ACKNOWLEDGE_SVC_PROBLEM,url_encode(host_name));
+					printf("&service=%s'>Acknowledge this service problem</a></td></tr>\n",url_encode(service_desc));
+				        }
+				else{
+					printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Remove Problem Acknowledgement'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,REMOVE_ACKNOWLEDGEMENT_ICON,COMMAND_CGI,CMD_REMOVE_SVC_ACKNOWLEDGEMENT,url_encode(host_name));
+					printf("&service=%s'>Remove problem acknowledgement</a></td></tr>\n",url_encode(service_desc));
+				        }
+			        }
+			if(temp_svcstatus->notifications_enabled){
+				printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Disable Notifications For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,DISABLED_ICON,COMMAND_CGI,CMD_DISABLE_SVC_NOTIFICATIONS,url_encode(host_name));
+				printf("&service=%s'>Disable notifications for this service</a></td></tr>\n",url_encode(service_desc));
+				if(temp_svcstatus->status!=SERVICE_OK){
+					printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Delay Next Service Notification'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,DELAY_ICON,COMMAND_CGI,CMD_DELAY_SVC_NOTIFICATION,url_encode(host_name));
+					printf("&service=%s'>Delay next service notification</a></td></tr>\n",url_encode(service_desc));
+			                }
+			        }
+			else{
+				printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Enable Notifications For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,ENABLED_ICON,COMMAND_CGI,CMD_ENABLE_SVC_NOTIFICATIONS,url_encode(host_name));
+				printf("&service=%s'>Enable notifications for this service</a></td></tr>\n",url_encode(service_desc));
+			        }
+
+			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Schedule Downtime For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,DOWNTIME_ICON,COMMAND_CGI,CMD_SCHEDULE_SVC_DOWNTIME,url_encode(host_name));
+			printf("&service=%s'>Schedule downtime for this service</a></td></tr>\n",url_encode(service_desc));
+
+			/*
+			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Cancel Scheduled Downtime For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,SCHEDULED_DOWNTIME_ICON,COMMAND_CGI,CMD_CANCEL_SVC_DOWNTIME,url_encode(host_name));
+			printf("&service=%s'>Cancel scheduled downtime for this service</a></td></tr>\n",url_encode(service_desc));
+			*/
+
 			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Disable Checks Of This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,DISABLED_ICON,COMMAND_CGI,CMD_DISABLE_SVC_CHECK,url_encode(host_name));
 			printf("&service=%s'>Disable checks of this service</a></td></tr>\n",url_encode(service_desc));
 
@@ -1287,7 +1409,6 @@ void show_service_info(void){
 			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Enable Checks Of This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,ENABLED_ICON,COMMAND_CGI,CMD_ENABLE_SVC_CHECK,url_encode(host_name));
 			printf("&service=%s'>Enable checks of this service</a></td></tr>\n",url_encode(service_desc));
 	                }
-
 		if(temp_svcstatus->accept_passive_service_checks==TRUE){
 			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Submit Passive Check Result For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,PASSIVE_ICON,COMMAND_CGI,CMD_PROCESS_SERVICE_CHECK_RESULT,url_encode(host_name));
 			printf("&service=%s'>Submit passive check result for this service</a></td></tr>\n",url_encode(service_desc));
@@ -1299,38 +1420,6 @@ void show_service_info(void){
 			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Start Accepting Passive Checks For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,ENABLED_ICON,COMMAND_CGI,CMD_ENABLE_PASSIVE_SVC_CHECKS,url_encode(host_name));
 			printf("&service=%s'>Start accepting passive checks for this service</a></td></tr>\n",url_encode(service_desc));
 		        }
-
-		if((temp_svcstatus->status==SERVICE_WARNING || temp_svcstatus->status==SERVICE_UNKNOWN || temp_svcstatus->status==SERVICE_CRITICAL) && temp_svcstatus->state_type==HARD_STATE){
-			if(temp_svcstatus->problem_has_been_acknowledged==FALSE){
-				printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Acknowledge This Service Problem'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,ACKNOWLEDGEMENT_ICON,COMMAND_CGI,CMD_ACKNOWLEDGE_SVC_PROBLEM,url_encode(host_name));
-				printf("&service=%s'>Acknowledge this service problem</a></td></tr>\n",url_encode(service_desc));
-			        }
-			else{
-				printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Remove Problem Acknowledgement'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,REMOVE_ACKNOWLEDGEMENT_ICON,COMMAND_CGI,CMD_REMOVE_SVC_ACKNOWLEDGEMENT,url_encode(host_name));
-				printf("&service=%s'>Remove problem acknowledgement</a></td></tr>\n",url_encode(service_desc));
-			        }
-		        }
-		if(temp_svcstatus->notifications_enabled){
-			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Disable Notifications For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,DISABLED_ICON,COMMAND_CGI,CMD_DISABLE_SVC_NOTIFICATIONS,url_encode(host_name));
-			printf("&service=%s'>Disable notifications for this service</a></td></tr>\n",url_encode(service_desc));
-			if(temp_svcstatus->status!=SERVICE_OK){
-				printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Delay Next Service Notification'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,DELAY_ICON,COMMAND_CGI,CMD_DELAY_SVC_NOTIFICATION,url_encode(host_name));
-				printf("&service=%s'>Delay next service notification</a></td></tr>\n",url_encode(service_desc));
-		                }
-		        }
-		else{
-			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Enable Notifications For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,ENABLED_ICON,COMMAND_CGI,CMD_ENABLE_SVC_NOTIFICATIONS,url_encode(host_name));
-			printf("&service=%s'>Enable notifications for this service</a></td></tr>\n",url_encode(service_desc));
-		        }
-
-		printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Schedule Downtime For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,DOWNTIME_ICON,COMMAND_CGI,CMD_SCHEDULE_SVC_DOWNTIME,url_encode(host_name));
-		printf("&service=%s'>Schedule downtime for this service</a></td></tr>\n",url_encode(service_desc));
-
-		/*
-		printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Cancel Scheduled Downtime For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,SCHEDULED_DOWNTIME_ICON,COMMAND_CGI,CMD_CANCEL_SVC_DOWNTIME,url_encode(host_name));
-		printf("&service=%s'>Cancel scheduled downtime for this service</a></td></tr>\n",url_encode(service_desc));
-		*/
-
 		if(temp_svcstatus->event_handler_enabled==TRUE){
 			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Disable Event Handler For This Service'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s",url_images_path,DISABLED_ICON,COMMAND_CGI,CMD_DISABLE_SVC_EVENT_HANDLER,url_encode(host_name));
 			printf("&service=%s'>Disable event handler for this service</a></td></tr>\n",url_encode(service_desc));

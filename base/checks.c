@@ -3,7 +3,7 @@
  * CHECKS.C - Service and host check functions for Nagios
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   11-14-2002
+ * Last Modified:   05-24-2002
  *
  * License:
  *
@@ -50,7 +50,6 @@ extern int      service_check_timeout;
 extern int      host_check_timeout;
 
 extern int      service_check_reaper_interval;
-extern int      max_check_reaper_time;
 
 extern int      use_aggressive_host_checking;
 
@@ -220,7 +219,7 @@ void run_service_check(service *svc){
 	strip(raw_command);
 
 	/* process any macros contained in the argument */
-	process_macros(raw_command,processed_command,sizeof(processed_command),0);
+	process_macros(raw_command,processed_command,sizeof(processed_command));
 	strip(processed_command);
 
 	/* save service info */
@@ -475,7 +474,6 @@ void run_service_check(service *svc){
 		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_WARNING,TRUE);
 
 		/* make sure we rescheduled the next service check at a valid time */
-		preferred_time=current_time;
 		get_next_valid_time(preferred_time,&next_valid_time,svc->check_period);
 
 		/* the service could not be rescheduled properly - set the next check time for next year, but don't actually reschedule it */
@@ -525,7 +523,6 @@ void reap_service_checks(void){
 	char old_plugin_output[MAX_PLUGINOUTPUT_LENGTH]="";
 	char temp_plugin_output[MAX_PLUGINOUTPUT_LENGTH]="";
 	char *temp_ptr;
-	time_t reaper_start_time;
 
 #ifdef DEBUG0
         printf("reap_service_checks() start\n");
@@ -534,8 +531,6 @@ void reap_service_checks(void){
 #ifdef DEBUG3
 	printf("Starting to reap service check results...\n");
 #endif
-
-	time(&reaper_start_time);
 
 	/* read all service checks results that have come in... */
 	while(read_svc_message(&queued_svc_msg)!=-1){
@@ -1132,16 +1127,9 @@ void reap_service_checks(void){
 		/* update service performance info */
 		update_service_performance_data(temp_service);
 
-		/* break out if we've been here too long (max_check_reaper_time seconds) */
-		time(&current_time);
-		if((int)(current_time-reaper_start_time)>max_check_reaper_time)
-			break;
-
-#if OLD_CRUD
 		/* check for external commands if we're doing so as often as possible */
 		if(command_check_interval==-1)
 			check_for_external_commands();
-#endif
 	        }
 
 #ifdef DEBUG3
@@ -1364,7 +1352,7 @@ void check_service_result_freshness(void){
 		if(expiration_time<current_time){
 
 			/* log a warning */
-			snprintf(buffer,sizeof(buffer)-1,"Warning: The results of service '%s' on host '%s' are stale by %lu seconds (threshold=%lu seconds).  I'm forcing an immediate check of the service.\n",temp_service->description,temp_service->host_name,(current_time-expiration_time),freshness_threshold);
+			snprintf(buffer,sizeof(buffer)-1,"Warning: The results of service '%s' on host '%s' are stale by %lu seconds.  I'm forcing an immediate check of the service.\n",temp_service->description,temp_service->host_name,(current_time-expiration_time));
 			buffer[sizeof(buffer)-1]='\x0';
 			write_to_logs_and_console(buffer,NSLOG_RUNTIME_WARNING,TRUE);
 
@@ -1713,7 +1701,7 @@ int run_host_check(host *hst){
 	raw_check_command[sizeof(raw_check_command)-1]='\x0';
 
 	/* process any macros in the check command */
-	process_macros(raw_check_command,&processed_check_command[0],(int)sizeof(processed_check_command),0);
+	process_macros(raw_check_command,&processed_check_command[0],(int)sizeof(processed_check_command));
 
 			
 #ifdef DEBUG3
@@ -1795,6 +1783,13 @@ int run_host_check(host *hst){
 		return_result=HOST_UP;
 	else
 		return_result=HOST_DOWN;
+
+	/* check for external commands if we're supposed to check as often as possible */
+	/* I don't  know that this is such a good idea, but processing of external commands
+	   really gets held up when long host checks are being performed.  At the moment
+	   I hate everything about Nagios, so what the heck... 05-15-02 */
+	if(command_check_interval==-1)
+		check_for_external_commands();
 
 #ifdef DEBUG3
 	printf("\tHost Check Result: Host '%s' is ",hst->name);

@@ -1,9 +1,9 @@
 /*****************************************************************************
  *
- * STATUSWRL.C - Nagios 3-D (VRML) Network Status View
+ * STATUSWRL.C - Nagios 3-D Network Status View
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   10-22-2002
+ * Last Modified:   04-20-2002
  *
  * Description:
  *
@@ -305,9 +305,6 @@ int process_cgivars(void){
 
 	        }
 
-	/* free memory allocated to the CGI variables */
-	free_cgivars(variables);
-
 	return error;
         }
 
@@ -357,9 +354,8 @@ void display_world(void){
 		printf("}\n");
 		printf("}\n");
 		printf("geometry Text {\n");
-		printf("string [ \"Error: You have not supplied any 3-D drawing coordinates.\", \"Read the documentation for more information on supplying\", \"3-D drawing coordinates by defining\", \"extended host information entries in your config files.\" ]\n");
+		printf("string [ \"You have not supplied any 3-D drawing coordinates.\", \"Read the FAQs for more information on doing this.\" ]\n");
 		printf("fontStyle FontStyle {\n");
-		printf("family \"TYPEWRITER\"\n");
 		printf("size 0.3\n");
 		printf("justify \"MIDDLE\"\n");
 		printf("}\n");
@@ -526,19 +522,9 @@ void calculate_host_coords(void){
 	/******************************/
 
 	/* user-supplied coords */
-	if(layout_method==LAYOUT_USER_SUPPLIED){
-
-		/* see which hosts we should draw (only those with 3-D coords) */
-		for(temp_hostextinfo=hostextinfo_list;temp_hostextinfo!=NULL;temp_hostextinfo=temp_hostextinfo->next){
-
-			if(temp_hostextinfo->have_3d_coords==TRUE)
-				temp_hostextinfo->should_be_drawn=TRUE;
-			else
-				temp_hostextinfo->should_be_drawn=FALSE;
-		        }
-
+	if(layout_method==LAYOUT_USER_SUPPLIED)
 		return;
-		}
+
 
 	/*****************************/
 	/***** AUTO-LAYOUT MODES *****/
@@ -553,10 +539,6 @@ void calculate_host_coords(void){
 		/* none was found, so add a blank one */
 		if(temp_hostextinfo==NULL)
 			add_extended_host_info(temp_host->name,NULL,NULL,NULL,NULL,NULL,0,0,0.0,0.0,0.0,0,0);
-
-		/* default z coord should 0 for auto-layout modes unless overridden later */
-		else
-			temp_hostextinfo->z_3d=0.0;
 	        }
 
 
@@ -811,8 +793,6 @@ void calculate_world_bounds(void){
 /* write global VRML data */
 void write_global_vrml_data(void){
 	hostextinfo *temp_hostextinfo;
-	float visibility_range=0.0;
-	float viewpoint_z=0.0;
 
 	/* write VRML code header */
 	printf("#VRML V2.0 utf8\n");
@@ -831,17 +811,12 @@ void write_global_vrml_data(void){
 	printf("skyColor 0.1 0.1 0.15\n");
 	printf("}\n");
 
-	/* calculate visibility range - don't let it get too low */
-	visibility_range=(max_world_size*2.0);
-	if(visibility_range<25.0)
-		visibility_range=25.0;
-
 	/* write fog information */
 	printf("\n");
 	printf("Fog{\n");
 	printf("color 0.1 0.1 0.15\n");
 	printf("fogType \"EXPONENTIAL\"\n");
-	printf("visibilityRange %2.2f\n",visibility_range);
+	printf("visibilityRange %2.2f\n",max_world_size*2.0);
 	printf("}\n");
 
 	/* custom viewpoint */
@@ -868,15 +843,10 @@ void write_global_vrml_data(void){
 	                }
 	        }
 
-	/* calculate z coord for default viewpoint - don't get too close */
-	viewpoint_z=max_world_size;
-	if(viewpoint_z<10.0)
-		viewpoint_z=10.0;
-
 	/* default viewpoint */
 	printf("\n");
 	printf("Viewpoint{\n");
-	printf("position %2.2f %2.2f %2.2f\n",min_x_coord+((max_x_coord-min_x_coord)/2.0),min_y_coord+((max_y_coord-min_y_coord)/2.0),viewpoint_z);
+	printf("position %2.2f %2.2f %2.2f\n",min_x_coord+((max_x_coord-min_x_coord)/2.0),min_y_coord+((max_y_coord-min_y_coord)/2.0),max_world_size);
 	printf("fieldOfView 0.78\n");
 	printf("description \"Default Viewpoint\"\n");
 	printf("}\n");
@@ -933,8 +903,6 @@ void draw_host(hostextinfo *temp_hostextinfo){
 	hoststatus *temp_hoststatus=NULL;
 	char state_string[16]="";
 	double x, y, z;
-	char *vrml_safe_hostname=NULL;
-	int a, ch;
 
 	if(temp_hostextinfo==NULL)
 		return;
@@ -952,16 +920,6 @@ void draw_host(hostextinfo *temp_hostextinfo){
 	temp_host=find_host(temp_hostextinfo->host_name,NULL);
 	if(temp_host==NULL)
 		return;
-
-	/* make the host name safe for embedding in VRML */
-	vrml_safe_hostname=(char *)strdup(temp_host->name);
-	if(vrml_safe_hostname==NULL)
-		return;
-	for(a=0;vrml_safe_hostname[a]!='\x0';a++){
-		ch=vrml_safe_hostname[a];
-		if((ch<'a' || ch>'z') && (ch<'A' || ch>'Z') && (ch<'0' || ch>'9'))
-			vrml_safe_hostname[a]='_';
-	        }
 
 	/* see if user is authorized to view this host  */
 	if(is_authorized_for_host(temp_host,&current_authdata)==FALSE)
@@ -981,9 +939,9 @@ void draw_host(hostextinfo *temp_hostextinfo){
 	printf("translation %2.2f %2.2f %2.2f\n",x,y,z);
 	printf("children [\n");
 
-	printf("DEF Host%s Shape{\n",vrml_safe_hostname);
+	printf("DEF Host%s Shape{\n",temp_host->name);
 	printf("appearance Appearance{\n");
-	printf("material DEF HostMat%s Material{\n",vrml_safe_hostname);
+	printf("material DEF HostMat%s Material{\n",temp_host->name);
 	if(temp_hoststatus==NULL)
 		printf("emissiveColor 0.2 0.2 0.2\ndiffuseColor 0.2 0.2 0.2\n");
 	else if(temp_hoststatus->status==HOST_UP)
@@ -1049,9 +1007,7 @@ void draw_host(hostextinfo *temp_hostextinfo){
 
 	/* host is down or unreachable, so make it fade in and out */
 	if(temp_hoststatus!=NULL && (temp_hoststatus->status==HOST_DOWN || temp_hoststatus->status==HOST_UNREACHABLE))
-		printf("ROUTE ProblemTimer.fraction_changed TO HostMat%s.set_transparency\n",vrml_safe_hostname);
-
-	free(vrml_safe_hostname);
+		printf("ROUTE ProblemTimer.fraction_changed TO HostMat%s.set_transparency\n",temp_host->name);
 
 	return;
 	}

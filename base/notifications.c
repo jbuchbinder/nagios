@@ -3,7 +3,7 @@
  * NOTIFICATIONS.C - Service and host notification functions for Nagios
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   08-30-2002
+ * Last Modified:   01-02-2002
  *
  * License:
  *
@@ -492,8 +492,7 @@ int notify_contact_of_service(contact *cntct,service *svc,char *ack_data){
 	        }
 
 	/* check viability of notifying this user */
-	/* acknowledgements are no longer excluded from this test - added 8/19/02 Tom Bertelson */
-	if(check_contact_service_notification_viability(cntct,svc)==ERROR)
+	if(ack_data==NULL && check_contact_service_notification_viability(cntct,svc)==ERROR)
 		return OK;
 
 	/* process all the notification commands this user has */
@@ -512,7 +511,7 @@ int notify_contact_of_service(contact *cntct,service *svc,char *ack_data){
 #endif
 
 			/* replace macros in the command line */
-			process_macros(raw_command_line,&command_line[0],(int)sizeof(command_line),STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
+			process_macros(raw_command_line,&command_line[0],(int)sizeof(command_line));
 
 #ifdef DEBUG4
 			printf("\tProcessed Command: %s\n",command_line);
@@ -1087,8 +1086,7 @@ int notify_contact_of_host(contact *cntct,host *hst,int state, char *ack_data){
 	        }
 
 	/* check viability of notifying this user about the host */
-	/* acknowledgements are no longer excluded from this test - added 8/19/02 Tom Bertelson */
-	if(check_contact_host_notification_viability(cntct,hst,state)==ERROR)
+	if(ack_data==NULL && check_contact_host_notification_viability(cntct,hst,state)==ERROR)
 		return OK;
 
 	/* process all the notification commands this user has */
@@ -1108,7 +1106,7 @@ int notify_contact_of_host(contact *cntct,host *hst,int state, char *ack_data){
 #endif
 
 			/* replace macros in the command line */
-			process_macros(raw_command_line,&command_line[0],(int)sizeof(command_line),STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
+			process_macros(raw_command_line,&command_line[0],(int)sizeof(command_line));
 
 #ifdef DEBUG4
 			printf("\tProcessed Command: %s\n",command_line);
@@ -1367,10 +1365,6 @@ time_t get_next_service_notification_time(service *svc, time_t offset){
 	/* search all the escalation entries for valid matches for this service (at its current notification number) */
 	for(temp_se=serviceescalation_list;temp_se!=NULL;temp_se=temp_se->next){
 
-		/* interval < 0 means to use non-escalated interval */
-		if(temp_se->notification_interval<0)
-			continue;
-
 		/* skip this entry if it isn't appropriate */
 		if(is_valid_escalation_for_service_notification(svc,temp_se)==FALSE)
 			continue;
@@ -1432,10 +1426,6 @@ time_t get_next_host_notification_time(host *hst, int state, time_t offset){
 	/* check all the host escalation entries for valid matches for this host (at its current notification number) */
 	for(temp_he=hostescalation_list;temp_he!=NULL;temp_he=temp_he->next){
 
-		/* interval < 0 means to use non-escalated interval */
-		if(temp_he->notification_interval<0)
-			continue;
-
 		/* skip this entry if it itsn't appropriate */
 		if(is_valid_host_escalation_for_host_notification(hst,state,temp_he)==FALSE)
 			continue;
@@ -1446,17 +1436,13 @@ time_t get_next_host_notification_time(host *hst, int state, time_t offset){
 			interval_to_use=temp_he->notification_interval;
 		        }
 
-		/* else use the shortest of all valid escalation intervals  */
+		/* else use the shortest of all valid escalation intervals */
 		else if(temp_he->notification_interval<interval_to_use)
 			interval_to_use=temp_he->notification_interval;
 	        }
 
 	/* check all the hostgroup escalation entries for valid matches for this host (at its current notification number) */
 	for(temp_hge=hostgroupescalation_list;temp_hge!=NULL;temp_hge=temp_hge->next){
-
-		/* interval < 0 means to use non-escalated interval */
-		if(temp_hge->notification_interval<0)
-			continue;
 
 		/* skip this entry if it itsn't appropriate */
 		if(is_valid_hostgroup_escalation_for_host_notification(hst,state,temp_hge)==FALSE)

@@ -3,7 +3,7 @@
  * TAC.C - Nagios Tactical Monitoring Overview CGI
  *
  * Copyright (c) 2001-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 08-07-2002
+ * Last Modified: 05-14-2002
  *
  * This CGI program will display the contents of the Nagios
  * log file.
@@ -140,41 +140,34 @@ int hosts_pending=0;
 int hosts_pending_disabled=0;
 int hosts_up_disabled=0;
 int hosts_up_unacknowledged=0;
-int hosts_up=0;
 int hosts_down_scheduled=0;
 int hosts_down_acknowledged=0;
 int hosts_down_disabled=0;
 int hosts_down_unacknowledged=0;
-int hosts_down=0;
 int hosts_unreachable_scheduled=0;
 int hosts_unreachable_acknowledged=0;
 int hosts_unreachable_disabled=0;
 int hosts_unreachable_unacknowledged=0;
-int hosts_unreachable=0;
 
 int services_pending=0;
 int services_pending_disabled=0;
 int services_ok_disabled=0;
 int services_ok_unacknowledged=0;
-int services_ok=0;
 int services_warning_host_problem=0;
 int services_warning_scheduled=0;
 int services_warning_acknowledged=0;
 int services_warning_disabled=0;
 int services_warning_unacknowledged=0;
-int services_warning=0;
 int services_unknown_host_problem=0;
 int services_unknown_scheduled=0;
 int services_unknown_acknowledged=0;
 int services_unknown_disabled=0;
 int services_unknown_unacknowledged=0;
-int services_unknown=0;
 int services_critical_host_problem=0;
 int services_critical_scheduled=0;
 int services_critical_acknowledged=0;
 int services_critical_disabled=0;
 int services_critical_unacknowledged=0;
-int services_critical=0;
 
 
 
@@ -381,9 +374,6 @@ int process_cgivars(void){
 	
 	        }
 
-	/* free memory allocated to the CGI variables */
-	free_cgivars(variables);
-
 	return error;
         }
 
@@ -439,7 +429,6 @@ void analyze_status_data(void){
 				services_ok_disabled++;
 			else
 				services_ok_unacknowledged++;
-			services_ok++;
 		        }
 
 		else if(temp_servicestatus->status==SERVICE_WARNING){
@@ -462,7 +451,6 @@ void analyze_status_data(void){
 			        }
 			if(problem==TRUE)
 				services_warning_unacknowledged++;
-			services_warning++;
 		        }
 
 		else if(temp_servicestatus->status==SERVICE_UNKNOWN){
@@ -485,7 +473,6 @@ void analyze_status_data(void){
 			        }
 			if(problem==TRUE)
 				services_unknown_unacknowledged++;
-			services_unknown++;
 		        }
 
 		else if(temp_servicestatus->status==SERVICE_CRITICAL){
@@ -508,13 +495,13 @@ void analyze_status_data(void){
 			        }
 			if(problem==TRUE)
 				services_critical_unacknowledged++;
-			services_critical++;
 		        }
 
 		else if(temp_servicestatus->status==SERVICE_PENDING){
 			if(temp_servicestatus->checks_enabled==FALSE)
 				services_pending_disabled++;
-			services_pending++;
+			else
+				services_pending++;
 		        }
 
 
@@ -594,7 +581,6 @@ void analyze_status_data(void){
 				hosts_up_disabled++;
 			else
 				hosts_up_unacknowledged++;
-			hosts_up++;
 		        }
 
 		else if(temp_hoststatus->status==HOST_DOWN){
@@ -612,7 +598,6 @@ void analyze_status_data(void){
 			        }
 			if(problem==TRUE)
 				hosts_down_unacknowledged++;
-			hosts_down++;
 		        }
 
 		else if(temp_hoststatus->status==HOST_UNREACHABLE){
@@ -630,13 +615,13 @@ void analyze_status_data(void){
 			        }
 			if(problem==TRUE)
 				hosts_unreachable_unacknowledged++;
-			hosts_unreachable++;
 		        }
 		
 		else if(temp_hoststatus->status==HOST_PENDING){
 			if(temp_hoststatus->checks_enabled==FALSE)
 				hosts_pending_disabled++;
-			hosts_pending++;
+			else
+				hosts_pending++;
 		        }
 
 		/* get health stats */
@@ -1043,9 +1028,9 @@ void display_tac_overview(void){
 	printf("<tr><td colspan=4 height=20 class='hostTitle'>&nbsp;Hosts</td></tr>\n");
 
 	printf("<tr>\n");
-	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Down</a></td>\n",STATUS_CGI,HOST_DOWN,hosts_down);
-	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Unreachable</a></td>\n",STATUS_CGI,HOST_UNREACHABLE,hosts_unreachable);
-	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Up</a></td>\n",STATUS_CGI,HOST_UP,hosts_up);
+	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Down</a></td>\n",STATUS_CGI,HOST_DOWN,hosts_down_unacknowledged+hosts_down_scheduled+hosts_down_acknowledged+hosts_down_disabled);
+	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Unreachable</a></td>\n",STATUS_CGI,HOST_UNREACHABLE,hosts_unreachable_unacknowledged+hosts_unreachable_scheduled+hosts_unreachable_acknowledged+hosts_unreachable_disabled);
+	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Up</a></td>\n",STATUS_CGI,HOST_UP,hosts_up_unacknowledged+hosts_up_disabled);
 	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Pending</a></td>\n",STATUS_CGI,HOST_PENDING,hosts_pending);
 	printf("</tr>\n");
 
@@ -1183,10 +1168,10 @@ void display_tac_overview(void){
 	printf("<tr><td colspan=5 height=20 class='hostTitle'>&nbsp;Services</td></tr>\n");
 
 	printf("<tr>\n");
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Critical</a></td>\n",STATUS_CGI,SERVICE_CRITICAL,services_critical);
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Warning</a></td>\n",STATUS_CGI,SERVICE_WARNING,services_warning);
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Unknown</a></td>\n",STATUS_CGI,SERVICE_UNKNOWN,services_unknown);
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Ok</a></td>\n",STATUS_CGI,SERVICE_OK,services_ok);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Critical</a></td>\n",STATUS_CGI,SERVICE_CRITICAL,services_critical_unacknowledged+services_critical_host_problem+services_critical_scheduled+services_critical_acknowledged+services_critical_disabled);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Warning</a></td>\n",STATUS_CGI,SERVICE_WARNING,services_warning_unacknowledged+services_warning_host_problem+services_warning_scheduled+services_warning_acknowledged+services_warning_disabled);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Unknown</a></td>\n",STATUS_CGI,SERVICE_UNKNOWN,services_unknown_unacknowledged+services_unknown_host_problem+services_unknown_scheduled+services_unknown_acknowledged+services_unknown_disabled);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Ok</a></td>\n",STATUS_CGI,SERVICE_OK,services_ok_unacknowledged+services_ok_disabled);
 	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Pending</a></td>\n",STATUS_CGI,SERVICE_PENDING,services_pending);
 	printf("</tr>\n");
 
@@ -1377,34 +1362,34 @@ void display_tac_overview(void){
 	printf("<td valign=top><a href='%s?cmd_typ=%d'><img src='%s%s' border=0 alt='Flap Detection %s'></a></td>\n",COMMAND_CGI,(enable_flap_detection==TRUE)?CMD_DISABLE_FLAP_DETECTION:CMD_ENABLE_FLAP_DETECTION,url_images_path,(enable_flap_detection==TRUE)?TAC_ENABLED_ICON:TAC_DISABLED_ICON,(enable_flap_detection==TRUE)?"Enabled":"Disabled");
 	printf("<Td width=10>&nbsp;</td>\n");
 	if(enable_flap_detection==TRUE){
-		printf("<Td valign=top width=100%% class='featureEnabledFlapDetection'>\n");
+		printf("<Td valign=top width=100%% class='featureEnabled'>\n");
 		printf("<table border=0 width=100%%>\n");
 
 		if(flap_disabled_services>0)
-			printf("<tr><td width=100%% class='featureItemDisabledServiceFlapDetection'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_FLAP_DETECTION_DISABLED,flap_disabled_services,(flap_disabled_services==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_FLAP_DETECTION_DISABLED,flap_disabled_services,(flap_disabled_services==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledServiceFlapDetection'>All Services Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Services Enabled</td></tr>\n");
 
 		if(flapping_services>0)
-			printf("<tr><td width=100%% class='featureItemServicesFlapping'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Flapping</a></td></tr>\n",STATUS_CGI,SERVICE_IS_FLAPPING,flapping_services,(flapping_services==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Flapping</a></td></tr>\n",STATUS_CGI,SERVICE_IS_FLAPPING,flapping_services,(flapping_services==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemServicesNotFlapping'>No Services Flapping</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>No Services Flapping</td></tr>\n");
 
 		if(flap_disabled_hosts>0)
-			printf("<tr><td width=100%% class='featureItemDisabledHostFlapDetection'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n",STATUS_CGI,HOST_FLAP_DETECTION_DISABLED,flap_disabled_hosts,(flap_disabled_hosts==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n",STATUS_CGI,HOST_FLAP_DETECTION_DISABLED,flap_disabled_hosts,(flap_disabled_hosts==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledHostFlapDetection'>All Hosts Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Hosts Enabled</td></tr>\n");
 
 		if(flapping_hosts>0)
-			printf("<tr><td width=100%% class='featureItemHostsFlapping'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Flapping</a></td></tr>\n",STATUS_CGI,HOST_IS_FLAPPING,flapping_hosts,(flapping_hosts==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Flapping</a></td></tr>\n",STATUS_CGI,HOST_IS_FLAPPING,flapping_hosts,(flapping_hosts==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemHostsNotFlapping'>No Hosts Flapping</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>No Hosts Flapping</td></tr>\n");
 
 		printf("</table>\n");
 		printf("</td>\n");
 	        }
 	else
-		printf("<Td valign=center width=100%% class='featureDisabledFlapDetection'>N/A</td>\n");
+		printf("<Td valign=center width=100%% class='featureDisabled'>N/A</td>\n");
 	printf("</tr>\n");
 	printf("</table>\n");
 	printf("</td>\n");
@@ -1418,24 +1403,24 @@ void display_tac_overview(void){
 	printf("<td valign=top><a href='%s?cmd_typ=%d'><img src='%s%s' border=0 alt='Notifications %s'></a></td>\n",COMMAND_CGI,(enable_notifications==TRUE)?CMD_DISABLE_NOTIFICATIONS:CMD_ENABLE_NOTIFICATIONS,url_images_path,(enable_notifications==TRUE)?TAC_ENABLED_ICON:TAC_DISABLED_ICON,(enable_notifications==TRUE)?"Enabled":"Disabled");
 	printf("<Td width=10>&nbsp;</td>\n");
 	if(enable_notifications==TRUE){
-		printf("<Td valign=top width=100%% class='featureEnabledNotifications'>\n");
+		printf("<Td valign=top width=100%% class='featureEnabled'>\n");
 		printf("<table border=0 width=100%%>\n");
 
 		if(notification_disabled_services>0)
-			printf("<tr><td width=100%% class='featureItemDisabledServiceNotifications'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_NOTIFICATIONS_DISABLED,notification_disabled_services,(notification_disabled_services==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_NOTIFICATIONS_DISABLED,notification_disabled_services,(notification_disabled_services==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledServiceNotifications'>All Services Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Services Enabled</td></tr>\n");
 
 		if(notification_disabled_hosts>0)
-			printf("<tr><td width=100%% class='featureItemDisabledHostNotifications'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n",STATUS_CGI,HOST_NOTIFICATIONS_DISABLED,notification_disabled_hosts,(notification_disabled_hosts==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n",STATUS_CGI,HOST_NOTIFICATIONS_DISABLED,notification_disabled_hosts,(notification_disabled_hosts==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledHostNotifications'>All Hosts Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Hosts Enabled</td></tr>\n");
 
 		printf("</table>\n");
 		printf("</td>\n");
 	        }
 	else
-		printf("<Td valign=center width=100%% class='featureDisabledNotifications'>N/A</td>\n");
+		printf("<Td valign=center width=100%% class='featureDisabled'>N/A</td>\n");
 	printf("</tr>\n");
 	printf("</table>\n");
 	printf("</td>\n");
@@ -1450,24 +1435,24 @@ void display_tac_overview(void){
 	printf("<td valign=top><a href='%s?cmd_typ=%d'><img src='%s%s' border=0 alt='Event Handlers %s'></a></td>\n",COMMAND_CGI,(enable_event_handlers==TRUE)?CMD_DISABLE_EVENT_HANDLERS:CMD_ENABLE_EVENT_HANDLERS,url_images_path,(enable_event_handlers==TRUE)?TAC_ENABLED_ICON:TAC_DISABLED_ICON,(enable_event_handlers==TRUE)?"Enabled":"Disabled");
 	printf("<Td width=10>&nbsp;</td>\n");
 	if(enable_event_handlers==TRUE){
-		printf("<Td valign=top width=100%% class='featureEnabledHandlers'>\n");
+		printf("<Td valign=top width=100%% class='featureEnabled'>\n");
 		printf("<table border=0 width=100%%>\n");
 
 		if(event_handler_disabled_services>0)
-			printf("<tr><td width=100%% class='featureItemDisabledServiceHandlers'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_EVENT_HANDLER_DISABLED,event_handler_disabled_services,(event_handler_disabled_services==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_EVENT_HANDLER_DISABLED,event_handler_disabled_services,(event_handler_disabled_services==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledServiceHandlers'>All Services Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Services Enabled</td></tr>\n");
 
 		if(event_handler_disabled_hosts>0)
-			printf("<tr><td width=100%% class='featureItemDisabledHostHandlers'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n",STATUS_CGI,HOST_EVENT_HANDLER_DISABLED,event_handler_disabled_hosts,(event_handler_disabled_hosts==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n",STATUS_CGI,HOST_EVENT_HANDLER_DISABLED,event_handler_disabled_hosts,(event_handler_disabled_hosts==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledHostHandlers'>All Hosts Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Hosts Enabled</td></tr>\n");
 
 		printf("</table>\n");
 		printf("</td>\n");
 	        }
 	else
-		printf("<Td valign=center width=100%% class='featureDisabledHandlers'>N/A</td>\n");
+		printf("<Td valign=center width=100%% class='featureDisabled'>N/A</td>\n");
 	printf("</tr>\n");
 	printf("</table>\n");
 	printf("</td>\n");
@@ -1482,24 +1467,24 @@ void display_tac_overview(void){
 	printf("<td valign=top><a href='%s?cmd_typ=%d'><img src='%s%s' border='0' alt='Active Checks %s'></a></td>\n",COMMAND_CGI,(execute_service_checks==TRUE)?CMD_STOP_EXECUTING_SVC_CHECKS:CMD_START_EXECUTING_SVC_CHECKS,url_images_path,(execute_service_checks==TRUE)?TAC_ENABLED_ICON:TAC_DISABLED_ICON,(execute_service_checks==TRUE)?"Enabled":"Disabled");
 	printf("<Td width=10>&nbsp;</td>\n");
 	if(execute_service_checks==TRUE){
-		printf("<Td valign=top width=100%% class='featureEnabledActiveChecks'>\n");
+		printf("<Td valign=top width=100%% class='featureEnabled'>\n");
 		printf("<table border=0 width=100%%>\n");
 
 		if(active_checks_disabled_services>0)
-			printf("<tr><td width=100%% class='featureItemDisabledActiveServiceChecks'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_CHECKS_DISABLED,active_checks_disabled_services,(active_checks_disabled_services==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_CHECKS_DISABLED,active_checks_disabled_services,(active_checks_disabled_services==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledActiveServiceChecks'>All Services Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Services Enabled</td></tr>\n");
 
 		if(active_checks_disabled_hosts>0)
-			printf("<tr><td width=100%% class='featureItemDisabledActiveHostChecks'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n",STATUS_CGI,HOST_CHECKS_DISABLED,active_checks_disabled_hosts,(active_checks_disabled_hosts==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n",STATUS_CGI,HOST_CHECKS_DISABLED,active_checks_disabled_hosts,(active_checks_disabled_hosts==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledActiveHostChecks'>All Hosts Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Hosts Enabled</td></tr>\n");
 
 		printf("</table>\n");
 		printf("</td>\n");
 	        }
 	else
-		printf("<Td valign=center width=100%% class='featureDisabledActiveChecks'>N/A</td>\n");
+		printf("<Td valign=center width=100%% class='featureDisabled'>N/A</td>\n");
 	printf("</tr>\n");
 	printf("</table>\n");
 	printf("</td>\n");
@@ -1515,19 +1500,19 @@ void display_tac_overview(void){
 	printf("<Td width=10>&nbsp;</td>\n");
 	if(accept_passive_service_checks==TRUE){
 
-		printf("<Td valign=top width=100%% class='featureEnabledPassiveChecks'>\n");
+		printf("<Td valign=top width=100%% class='featureEnabled'>\n");
 		printf("<table border=0 width=100%% cellspacing=0 cellpadding=0>\n");
 
 		if(passive_checks_disabled_services>0)
-			printf("<tr><td width=100%% class='featureItemDisabledPassiveServiceChecks'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_PASSIVE_CHECKS_DISABLED,passive_checks_disabled_services,(passive_checks_disabled_services==1)?"":"s");
+			printf("<tr><td width=100%% class='featureItemDisabled'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n",STATUS_CGI,SERVICE_PASSIVE_CHECKS_DISABLED,passive_checks_disabled_services,(passive_checks_disabled_services==1)?"":"s");
 		else
-			printf("<tr><td width=100%% class='featureItemEnabledPassiveServiceChecks'>All Services Enabled</td></tr>\n");
+			printf("<tr><td width=100%% class='featureItemEnabled'>All Services Enabled</td></tr>\n");
 
 		printf("</table>\n");
 		printf("</td>\n");
 	        }
 	else
-		printf("<Td valign=center width=100%% class='featureDisabledPassiveChecks'>N/A</td>\n");
+		printf("<Td valign=center width=100%% class='featureDisabled'>N/A</td>\n");
 	printf("</tr>\n");
 	printf("</table>\n");
 	printf("</td>\n");

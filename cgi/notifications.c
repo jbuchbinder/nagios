@@ -3,7 +3,7 @@
  * NOTIFICATIONS.C - Nagios Notifications CGI
  *
  * Copyright (c) 1999-2002 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 08-12-2002
+ * Last Modified: 05-14-2002
  *
  * This CGI program will display the notification events for 
  * a given host or contact or for all contacts/hosts.
@@ -67,8 +67,8 @@ int log_archive=0;
 
 int query_type=FIND_HOST;
 int find_all=TRUE;
-char *query_contact_name="";
-char *query_host_name="";
+char *query_contact_name="all";
+char *query_host_name="all";
 char *query_svc_description="";
 
 int notification_options=NOTIFICATION_ALL;
@@ -366,9 +366,8 @@ int process_cgivars(void){
 				break;
 			        }
 
-			query_host_name=strdup(variables[x]);
-			if(query_host_name==NULL)
-				query_host_name="";
+			query_host_name=variables[x];
+
 			if(!strcmp(query_host_name,"all"))
 				find_all=TRUE;
 			else
@@ -384,10 +383,8 @@ int process_cgivars(void){
 				break;
 			        }
 
-			query_contact_name=strdup(variables[x]);
+			query_contact_name=variables[x];
 
-			if(query_contact_name==NULL)
-				query_contact_name="";
 			if(!strcmp(query_contact_name,"all"))
 				find_all=TRUE;
 			else
@@ -403,9 +400,7 @@ int process_cgivars(void){
 				break;
 			        }
 
-			query_svc_description=strdup(variables[x]);
-			if(query_svc_description==NULL)
-				query_svc_description="";
+			query_svc_description=variables[x];
 		        }
 	
 		/* we found the notification type argument */
@@ -445,9 +440,6 @@ int process_cgivars(void){
 		else if(!strcmp(variables[x],"noheader"))
 			display_header=FALSE;
                 }
-
-	/* free memory allocated to the CGI variables */
-	free_cgivars(variables);
 
 	return error;
         }

@@ -27,7 +27,7 @@
 #              used to provide network services status.
 #
   
-status_nagios ()
+status ()
 {
 
 	if test ! -f $NagiosRun; then
@@ -54,7 +54,7 @@ status_nagios ()
 }
 
 
-killproc_nagios ()
+killproc ()
 {
 
 	if test ! -f $NagiosRun; then
@@ -107,17 +107,17 @@ case "$1" in
 		$NagiosBin -d $NagiosCfg
 		if [ -d $NagiosLckDir ]; then touch $NagiosLckDir/$NagiosLckFile; fi
 		sleep 1
-		status_nagios nagios
+		status nagios
 		;;
 
 	stop)
 		echo "Stopping network monitor: nagios"
-		killproc_nagios nagios
+		killproc nagios
 		rm -f $NagiosLog $NagiosTmp $NagiosRun $NagiosLckDir/$NagiosLckFile $NagiosCmd
 		;;
 
 	status)
-		status_nagios nagios
+		status nagios
 		;;
 
 	restart)
@@ -143,9 +143,9 @@ case "$1" in
 				$0 start
 			else
 				NagiosPID=`head -n 1 $NagiosRun`
-				if status_nagios > /dev/null; then
+				if status nagios > /dev/null; then
 					printf "Reloading nagios configuration..."
-					killproc_nagios nagios -HUP
+					killproc nagios -HUP
 					echo "done"
 				else
 					$0 stop
