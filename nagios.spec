@@ -1,5 +1,5 @@
 %define name nagios
-%define version 2.0
+%define version 2.0b6
 %define release 1.fc4.test
 %define nsusr nagios
 %define nsgrp nagios
@@ -192,7 +192,7 @@ CFLAGS="$RPM_OPT_FLAGS" CXXFLAGS="$RPM_OPT_FLAGS" \
 	--with-htmurl=/nagios \
 	--with-lockfile=/var/run/nagios.pid \
 	--with-nagios-user=%{nsusr} \
-	--with-nagios-group=%{nsgrp} \
+	--with-nagios-grp=%{nsgrp} \
 	--prefix=%{_prefix} \
 	--exec-prefix=%{_prefix}/sbin \
 	--bindir=%{_prefix}/sbin \
