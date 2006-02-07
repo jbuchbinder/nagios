@@ -9,9 +9,9 @@ AC_CONFIG_HEADER(include/config.h include/snprintf.h include/nagios.h include/cg
 AC_PREFIX_DEFAULT(/usr/local/nagios)
 
 PKG_NAME=nagios
-PKG_VERSION="2.0"
+PKG_VERSION="2.0b2"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="02-07-2006"
+PKG_REL_DATE="02-09-2005"
 
 dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL
@@ -29,7 +29,7 @@ dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS(arpa/inet.h ctype.h dirent.h errno.h fcntl.h getopt.h grp.h limits.h math.h netdb.h netinet/in.h pthread.h pthreads.h pwd.h regex.h signal.h socket.h string.h strings.h sys/mman.h sys/types.h sys/time.h sys/resource.h sys/wait.h sys/socket.h sys/stat.h sys/timeb.h sys/un.h sys/ipc.h sys/msg.h sys/poll.h syslog.h uio.h unistd.h)
+AC_CHECK_HEADERS(arpa/inet.h ctype.h dirent.h errno.h fcntl.h getopt.h grp.h limits.h math.h netdb.h netinet/in.h pthread.h pthreads.h pwd.h regex.h signal.h socket.h strings.h string.h syslog.h unistd.h uio.h sys/mman.h sys/types.h sys/time.h sys/resource.h sys/wait.h sys/socket.h sys/stat.h sys/timeb.h sys/un.h sys/ipc.h sys/msg.h sys/poll.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -42,8 +42,8 @@ AC_TYPE_SIGNAL
 AC_TYPE_GETGROUPS
 
 dnl Checks for library functions.
-dnl AC_CHECK_LIB(nsl,main,SOCKETLIBS="$SOCKETLIBS -lnsl")
-dnl AC_CHECK_LIB(socket,socket,SOCKETLIBS="$SOCKETLIBS -lsocket")
+AC_CHECK_LIB(nsl,main,SOCKETLIBS="$SOCKETLIBS -lnsl")
+AC_CHECK_LIB(socket,socket,SOCKETLIBS="$SOCKETLIBS -lsocket")
 AC_SUBST(SOCKETLIBS)
 AC_CHECK_FUNCS(initgroups setenv strdup strstr strtoul unsetenv)
 
@@ -447,12 +447,6 @@ AC_ARG_ENABLE(DEBUGALL,--enable-DEBUGALL shows all debugging messages,[
 	])
 
 
-USE_NANOSLEEP=yes
-AC_ARG_ENABLE(nanosleep,--enable-nanosleep enables use of nanosleep (instead sleep) in event timing,USE_NANOSLEEP=$enableval,USE_NANOSLEEP=yes)
-if test x$USE_NANOSLEEP = xyes; then
-	AC_DEFINE_UNQUOTED(USE_NANOSLEEP)
-fi
-
 USE_EVENTBROKER=yes
 AC_ARG_ENABLE(event-broker,--enable-event-broker enables integration of event broker routines,USE_EVENTBROKER=$enableval,USE_EVENTBROKER=yes)
 
@@ -493,7 +487,7 @@ if test x$USE_EVENTBROKER = xyes; then
 	# Otherwise we assume that if the linker accepts the flag, it is needed.
 	AC_MSG_CHECKING(for extra flags needed to export symbols)
 	case $host_os in
-		aix4*|aix5*)
+		aix4*)
 			BROKER_LDFLAGS="$BROKER_LDFLAGS -Wl,-bexpall,-brtl"
 		;;
 		bsdi*)
@@ -521,7 +515,7 @@ if test x$USE_EVENTBROKER = xyes; then
 		solaris2*|sysv4*)
 			MOD_LDFLAGS="-G"
 		;;
-		aix4*|aix5*)
+		aix4*)
 			#MOD_LDFLAGS="-G -bnoentry -bexpall"
 			MOD_LDFLAGS="-G -bM:SRE -bnoentry -bexpall"
 		;;

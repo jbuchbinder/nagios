@@ -2,14 +2,15 @@
  *
  * OBJECTS.H - Header file for object addition/search functions
  *
- * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 12-27-2005
+ * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 11-05-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,19 +30,7 @@
 #include "config.h"
 #include "common.h"
 
-#ifdef __cplusplus
-  extern "C" {
-#endif
 
-
-
-/*************** CURRENT OBJECT REVISION **************/
-
-#define CURRENT_OBJECT_STRUCTURE_VERSION        2
-
-
-
-/***************** OBJECT SIZE LIMITS *****************/
 
 #define MAX_HOSTNAME_LENGTH            		64	/* max. host name length */
 #define MAX_SERVICEDESC_LENGTH			64	/* max. service description length */
@@ -50,7 +39,6 @@
 #define MAX_STATE_HISTORY_ENTRIES		21	/* max number of old states to keep track of for flap detection */
 
 #define MAX_CONTACT_ADDRESSES                   6       /* max number of custom addresses a contact can have */
-
 
 
 /***************** CHAINED HASH LIMITS ****************/
@@ -202,8 +190,6 @@ typedef struct host_struct{
 	int     total_services;
 	unsigned long total_service_check_interval;
 	unsigned long modified_attributes;
-	int     circular_path_checked;
-	int     contains_circular_path;
 #endif
 	struct  host_struct *next;
 	struct  host_struct *nexthash;
@@ -410,8 +396,7 @@ typedef struct servicedependency_struct{
 	int     fail_on_critical;
 	int     fail_on_pending;
 #ifdef NSCORE
-	int     circular_path_checked;
-	int     contains_circular_path;
+	int     has_been_checked;
 #endif
 	struct servicedependency_struct *next;
 	struct servicedependency_struct *nexthash;
@@ -445,8 +430,7 @@ typedef struct hostdependency_struct{
 	int     fail_on_unreachable;
 	int     fail_on_pending;
 #ifdef NSCORE
-	int     circular_path_checked;
-	int     contains_circular_path;
+	int     has_been_checked;
 #endif
 	struct hostdependency_struct *next;
 	struct hostdependency_struct *nexthash;
@@ -642,8 +626,6 @@ int check_for_circular_hostdependency(hostdependency *,hostdependency *,int);   
 int free_object_data(void);                             /* frees all allocated memory for the object definitions */
 int free_extended_data(void);                           /* frees memory allocated to the extended host/service information */
 
-#ifdef __cplusplus
-  }
-#endif
 
 #endif
+

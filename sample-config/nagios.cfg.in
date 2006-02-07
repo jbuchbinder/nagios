@@ -6,7 +6,7 @@
 # file.  I've provided some comments here, but things may not be so
 # clear without further explanation.
 #
-# Last Modified: 11-23-2005
+# Last Modified: 01-04-2005
 #
 ##############################################################################
 
@@ -43,16 +43,14 @@ cfg_file=@sysconfdir@/misccommands.cfg
 # config files if you wish (as done here), or keep them all in a
 # single config file.
 
-cfg_file=@sysconfdir@/minimal.cfg
-
-#cfg_file=@sysconfdir@/contactgroups.cfg
-#cfg_file=@sysconfdir@/contacts.cfg
-#cfg_file=@sysconfdir@/dependencies.cfg
-#cfg_file=@sysconfdir@/escalations.cfg
-#cfg_file=@sysconfdir@/hostgroups.cfg
-#cfg_file=@sysconfdir@/hosts.cfg
-#cfg_file=@sysconfdir@/services.cfg
-#cfg_file=@sysconfdir@/timeperiods.cfg
+cfg_file=@sysconfdir@/contactgroups.cfg
+cfg_file=@sysconfdir@/contacts.cfg
+cfg_file=@sysconfdir@/dependencies.cfg
+cfg_file=@sysconfdir@/escalations.cfg
+cfg_file=@sysconfdir@/hostgroups.cfg
+cfg_file=@sysconfdir@/hosts.cfg
+cfg_file=@sysconfdir@/services.cfg
+cfg_file=@sysconfdir@/timeperiods.cfg
 
 # Extended host/service info definitions are now stored along with
 # other object definitions:
@@ -97,7 +95,7 @@ resource_file=@sysconfdir@/resource.cfg
 # STATUS FILE
 # This is where the current status of all monitored services and
 # hosts is stored.  Its contents are read and processed by the CGIs.
-# The contents of the status file are deleted every time Nagios
+# The contentsof the status file are deleted every time Nagios
 #  restarts.
 
 status_file=@localstatedir@/status.dat
@@ -215,7 +213,7 @@ event_broker_options=-1
 #
 # Example:
 #
-#   broker_module=<modulepath> [moduleargs]
+#   nebmodule=<modulepath> [moduleargs]
 
 #broker_module=/somewhere/module1.o
 #broker_module=/somewhere/module2.o arg1 arg2=3 debug=0
@@ -310,7 +308,7 @@ log_external_commands=1
 
 # PASSIVE CHECKS LOGGING OPTION
 # If you don't want Nagios to log passive host and service checks, set
-# this value to 0.  If passive checks should be logged, set
+# this value to 0.  If passive service checks should be logged, set
 # this value to 1.
 
 log_passive_checks=1
@@ -820,7 +818,7 @@ status_update_interval=15
 # and detect hosts and services that are "flapping".  
 # Flapping occurs when a host or service changes between
 # states too frequently.  When Nagios detects that a 
-# host or service is flapping, it will temporarily suppress
+# host or service is flapping, it will temporarily supress
 # notifications for that host/service until it stops
 # flapping.  Flap detection is very experimental, so read
 # the HTML documentation before enabling this feature!

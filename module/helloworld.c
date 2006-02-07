@@ -2,17 +2,15 @@
  *
  * HELLOWORLD.C - Example of a simple NEB module
  *
- * Copyright (c) 2003-2005 Ethan Galstad (http://www.nagios.org)
+ * Copyright (c) 2003-2004 Ethan Galstad (nagios@nagios.org)
  *
- * Last Modified: 08-02-2005
+ * Last Modified: 11-05-2004
  *
  * Description:
  *
  * This is an example of a very basic module.  It does nothing useful other
- * than logging some messages to the main Nagios log file when it is initialized
- * (loaded), when it is closed (unloaded), and when aggregated status updates
- * occur.  I would not call that too useful, but hopefully it will serve as a
- * very basic example of how to write a NEB module...
+ * than printing a message when it is initialized (loaded) and closed
+ * (unloaded).  I would not call that useful...
  *
  * Instructions:
  * 
@@ -26,10 +24,6 @@
 #include "../include/nebmodules.h"
 #include "../include/nebcallbacks.h"
 
-/* include other event broker header files that we need for our work */
-#include "../include/nebstructs.h"
-#include "../include/broker.h"
-
 /* include some Nagios stuff as well */
 #include "../include/config.h"
 #include "../include/common.h"
@@ -38,11 +32,7 @@
 /* specify event broker API version (required) */
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
 
-
-void *helloworld_module_handle=NULL;
-
-void helloworld_reminder_message(char *);
-int helloworld_handle_data(int,void *);
+void reminder_message(char *);
 
 
 /* this function gets called when the module is loaded by the event broker */
@@ -51,11 +41,8 @@ int nebmodule_init(int flags, char *args, nebmodule *handle){
 	time_t current_time;
 	unsigned long interval;
 
-	/* save our handle */
-	helloworld_module_handle=handle;
-
 	/* log module info to the Nagios log file */
-	write_to_all_logs("helloworld: Copyright (c) 2003-2005 Ethan Galstad (nagios@nagios.org)",NSLOG_INFO_MESSAGE);
+	write_to_all_logs("helloworld: Copyright (c) 2003 Ethan Galstad (nagios@nagios.org)",NSLOG_INFO_MESSAGE);
 	
 	/* log a message to the Nagios log file */
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"helloworld: Hello world!\n");
@@ -65,10 +52,7 @@ int nebmodule_init(int flags, char *args, nebmodule *handle){
 	/* log a reminder message every 15 minutes (how's that for annoying? :-)) */
 	time(&current_time);
 	interval=900;
-	schedule_new_event(EVENT_USER_FUNCTION,TRUE,current_time+interval,TRUE,interval,NULL,TRUE,helloworld_reminder_message,"How about you?");
-
-	/* register to be notified of certain events... */
-	neb_register_callback(NEBCALLBACK_AGGREGATED_STATUS_DATA,helloworld_module_handle,0,helloworld_handle_data);
+	schedule_new_event(EVENT_USER_FUNCTION,TRUE,current_time+interval,TRUE,interval,NULL,TRUE,reminder_message,"How about you?");
 
 	return 0;
         }
@@ -77,10 +61,7 @@ int nebmodule_init(int flags, char *args, nebmodule *handle){
 /* this function gets called when the module is unloaded by the event broker */
 int nebmodule_deinit(int flags, int reason){
 	char temp_buffer[1024];
-
-	/* deregister for all events we previously registered for... */
-	neb_deregister_callback(NEBCALLBACK_AGGREGATED_STATUS_DATA,helloworld_handle_data);
-
+	
 	/* log a message to the Nagios log file */
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"helloworld: Goodbye world!\n");
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
@@ -91,7 +72,7 @@ int nebmodule_deinit(int flags, int reason){
 
 
 /* gets called every X minutes by an event in the scheduling queue */
-void helloworld_reminder_message(char *message){
+void reminder_message(char *message){
 	char temp_buffer[1024];
 	
 	/* log a message to the Nagios log file */
@@ -100,34 +81,5 @@ void helloworld_reminder_message(char *message){
 	write_to_all_logs(temp_buffer,NSLOG_INFO_MESSAGE);
 
 	return;
-        }
-
-
-/* handle data from Nagios daemon */
-int helloworld_handle_data(int event_type, void *data){
-	nebstruct_aggregated_status_data *agsdata=NULL;
-	char temp_buffer[1024];
-
-	/* what type of event/data do we have? */
-	switch(event_type){
-
-	case NEBCALLBACK_AGGREGATED_STATUS_DATA:
-
-		/* an aggregated status data dump just started or ended... */
-		if((agsdata=(nebstruct_aggregated_status_data *)data)){
-
-			/* log a message to the Nagios log file */
-			snprintf(temp_buffer,sizeof(temp_buffer)-1,"helloworld: An aggregated status update just %s.",(agsdata->type==NEBTYPE_AGGREGATEDSTATUS_STARTDUMP)?"started":"finished");
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			write_to_all_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-		        }
-
-		break;
-
-	default:
-		break;
-	        }
-
-	return 0;
         }
 

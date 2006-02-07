@@ -2,14 +2,15 @@
  *
  * TRENDS.C -  Nagios State Trends CGI
  *
- * Copyright (c) 1999-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 01-20-2006
+ * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 01-17-2005
  *
  * License:
  * 
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -384,9 +385,7 @@ int main(int argc, char **argv){
 
 			if(display_type==DISPLAY_HOST_TRENDS){
 				printf("<a href='%s?host=%s&t1=%lu&t2=%lu&includesoftstates=%s&assumestateretention=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedhoststate=%d&backtrack=%d&show_log_entries'>View Availability Report For This Host</a><BR>\n",AVAIL_CGI,url_encode(host_name),t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_host_state,backtrack_archives);
-#ifdef USE_HISTROGRAM
 				printf("<a href='%s?host=%s&t1=%lu&t2=%lu&assumestateretention=%s'>View Alert Histogram For This Host</a><BR>\n",HISTOGRAM_CGI,url_encode(host_name),t1,t2,(assume_state_retention==TRUE)?"yes":"no");
-#endif
 				printf("<a href='%s?host=%s'>View Status Detail For This Host</a><BR>\n",STATUS_CGI,url_encode(host_name));
 				printf("<a href='%s?host=%s'>View Alert History For This Host</a><BR>\n",HISTORY_CGI,url_encode(host_name));
 				printf("<a href='%s?host=%s'>View Notifications For This Host</a><BR>\n",NOTIFICATIONS_CGI,url_encode(host_name));
@@ -394,7 +393,7 @@ int main(int argc, char **argv){
 			else{
 				printf("<a href='%s?host=%s&t1=%lu&t2=%lu&includesoftstates=%s&assumestateretention=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedservicestate=%d&backtrack=%d'>View Trends For This Host</a><BR>\n",TRENDS_CGI,url_encode(host_name),t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
 				printf("<a href='%s?host=%s",AVAIL_CGI,url_encode(host_name));
-				printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s&includesoftstates=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedservicestate=%d&backtrack=%d&show_log_entries'>View Availability Report For This Service</a><BR>\n",url_encode(svc_description),t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
+				printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s&includesoftstates=%s&assumeinitialstates=%s&initialassumedservicestate=%d&backtrack=%d&show_log_entries'>View Availability Report For This Service</a><BR>\n",url_encode(svc_description),t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
 				printf("<a href='%s?host=%s",HISTOGRAM_CGI,url_encode(host_name));
 				printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s'>View Alert Histogram For This Service</a><BR>\n",url_encode(svc_description),t1,t2,(assume_state_retention==TRUE)?"yes":"no");
 				printf("<A HREF='%s?host=%s&",HISTORY_CGI,url_encode(host_name));
@@ -731,7 +730,6 @@ int main(int argc, char **argv){
 			printf("<DIV ALIGN=CENTER>\n");
 			printf("<IMG SRC='%s?createimage&t1=%lu&t2=%lu",TRENDS_CGI,(unsigned long)t1,(unsigned long)t2);
 			printf("&assumeinitialstates=%s",(assume_initial_states==TRUE)?"yes":"no");
-			printf("&assumestatesduringnotrunning=%s",(assume_states_during_notrunning==TRUE)?"yes":"no");
 			printf("&initialassumedhoststate=%d",initial_assumed_host_state);
 			printf("&initialassumedservicestate=%d",initial_assumed_service_state);
 			printf("&assumestateretention=%s",(assume_state_retention==TRUE)?"yes":"no");
@@ -2746,40 +2744,40 @@ void draw_time_breakdowns(void){
 
 		get_time_breakdown_string(total_time,time_up,"Up",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+5,(unsigned char *)temp_buffer,color_darkgreen);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*2),drawing_y_offset+5,(unsigned char *)"Up",color_darkgreen);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*2),drawing_y_offset+5,"Up",color_darkgreen);
 
 		get_time_breakdown_string(total_time,time_down,"Down",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+25,(unsigned char *)temp_buffer,color_red);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*4),drawing_y_offset+25,(unsigned char *)"Down",color_red);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*4),drawing_y_offset+25,"Down",color_red);
 
 		get_time_breakdown_string(total_time,time_unreachable,"Unreachable",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+45,(unsigned char *)temp_buffer,color_darkred);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*11),drawing_y_offset+45,(unsigned char *)"Unreachable",color_darkred);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*11),drawing_y_offset+45,"Unreachable",color_darkred);
 
 		get_time_breakdown_string(total_time,time_indeterminate,"Indeterminate",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+65,(unsigned char *)temp_buffer,color_black);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*13),drawing_y_offset+65,(unsigned char *)"Indeterminate",color_black);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*13),drawing_y_offset+65,"Indeterminate",color_black);
 	        }
 	else{
 		get_time_breakdown_string(total_time,time_ok,"Ok",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+5,(unsigned char *)temp_buffer,color_darkgreen);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*2),drawing_y_offset+5,(unsigned char *)"Ok",color_darkgreen);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*2),drawing_y_offset+5,"Ok",color_darkgreen);
 
 		get_time_breakdown_string(total_time,time_warning,"Warning",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+25,(unsigned char *)temp_buffer,color_yellow);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*7),drawing_y_offset+25,(unsigned char *)"Warning",color_yellow);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*7),drawing_y_offset+25,"Warning",color_yellow);
 
 		get_time_breakdown_string(total_time,time_unknown,"Unknown",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+45,(unsigned char *)temp_buffer,color_orange);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*7),drawing_y_offset+45,(unsigned char *)"Unknown",color_orange);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*7),drawing_y_offset+45,"Unknown",color_orange);
 
 		get_time_breakdown_string(total_time,time_critical,"Critical",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+65,(unsigned char *)temp_buffer,color_red);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*8),drawing_y_offset+65,(unsigned char *)"Critical",color_red);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*8),drawing_y_offset+65,"Critical",color_red);
 
 		get_time_breakdown_string(total_time,time_indeterminate,"Indeterminate",&temp_buffer[0],sizeof(temp_buffer));
 		gdImageString(trends_image,gdFontSmall,drawing_x_offset+drawing_width+20,drawing_y_offset+85,(unsigned char *)temp_buffer,color_black);
-		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*13),drawing_y_offset+85,(unsigned char *)"Indeterminate",color_black);
+		gdImageString(trends_image,gdFontSmall,drawing_x_offset-10-(gdFontSmall->w*13),drawing_y_offset+85,"Indeterminate",color_black);
 	        }
 
 	return;

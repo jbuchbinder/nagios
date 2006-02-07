@@ -2,14 +2,15 @@
  *
  * FLAPPING.C - State flap detection and handling routines for Nagios
  *
- * Copyright (c) 2001-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   08-12-2005
+ * Copyright (c) 2001-2003 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   08-28-2003
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -136,11 +137,11 @@ void check_for_service_flapping(service *svc, int update_history){
 
 	/* did the service just start flapping? */
 	if(is_flapping==TRUE && svc->is_flapping==FALSE)
-		set_service_flap(svc,curved_percent_change,high_threshold,low_threshold);
+		set_service_flap(svc,curved_percent_change,high_threshold);
 
 	/* did the service just stop flapping? */
 	else if(is_flapping==FALSE && svc->is_flapping==TRUE)
-		clear_service_flap(svc,curved_percent_change,high_threshold,low_threshold);
+		clear_service_flap(svc,curved_percent_change,low_threshold);
 
 #ifdef DEBUG0
 	printf("check_for_service_flapping() end\n");
@@ -252,11 +253,11 @@ void check_for_host_flapping(host *hst, int update_history){
 
 	/* did the host just start flapping? */
 	if(is_flapping==TRUE && hst->is_flapping==FALSE)
-		set_host_flap(hst,curved_percent_change,high_threshold,low_threshold);
+		set_host_flap(hst,curved_percent_change,high_threshold);
 
 	/* did the host just stop flapping? */
 	else if(is_flapping==FALSE && hst->is_flapping==TRUE)
-		clear_host_flap(hst,curved_percent_change,high_threshold,low_threshold);
+		clear_host_flap(hst,curved_percent_change,low_threshold);
 
 #ifdef DEBUG0
 	printf("check_for_host_flapping() end\n");
@@ -272,7 +273,7 @@ void check_for_host_flapping(host *hst, int update_history){
 
 
 /* handles a service that is flapping */
-void set_service_flap(service *svc, double percent_change, double high_threshold, double low_threshold){
+void set_service_flap(service *svc, double percent_change, double high_threshold){
 	char buffer[MAX_INPUT_BUFFER];
 
 #ifdef DEBUG0
@@ -280,12 +281,12 @@ void set_service_flap(service *svc, double percent_change, double high_threshold
 #endif
 
 	/* log a notice - this one is parsed by the history CGI */
-	snprintf(buffer,sizeof(buffer)-1,"SERVICE FLAPPING ALERT: %s;%s;STARTED; Service appears to have started flapping (%2.1f%% change >= %2.1f%% threshold)\n",svc->host_name,svc->description,percent_change,high_threshold);
+	snprintf(buffer,sizeof(buffer)-1,"SERVICE FLAPPING ALERT: %s;%s;STARTED; Service appears to have started flapping (%2.1f%% change > %2.1f%% threshold)\n",svc->host_name,svc->description,percent_change,high_threshold);
 	buffer[sizeof(buffer)-1]='\x0';
 	write_to_all_logs(buffer,NSLOG_RUNTIME_WARNING);
 
 	/* add a non-persistent comment to the service */
-	snprintf(buffer,sizeof(buffer)-1,"Notifications for this service are being suppressed because it was detected as having been flapping between different states (%2.1f%% change >= %2.1f%% threshold).  When the service state stabilizes and the flapping stops, notifications will be re-enabled.",percent_change,high_threshold);
+	snprintf(buffer,sizeof(buffer)-1,"Notifications for this service are being supressed because it was detected as having been flapping between different states (%2.1f%% change > %2.1f%% threshold).  When the service state stabilizes and the flapping stops, notifications will be re-enabled.",percent_change,high_threshold);
 	buffer[sizeof(buffer)-1]='\x0';
 	add_new_service_comment(FLAPPING_COMMENT,svc->host_name,svc->description,time(NULL),"(Nagios Process)",buffer,0,COMMENTSOURCE_INTERNAL,FALSE,(time_t)0,&(svc->flapping_comment_id));
 
@@ -294,7 +295,7 @@ void set_service_flap(service *svc, double percent_change, double high_threshold
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	broker_flapping_data(NEBTYPE_FLAPPING_START,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_FLAPPING,svc,percent_change,high_threshold,low_threshold,NULL);
+	broker_flapping_data(NEBTYPE_FLAPPING_START,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_FLAPPING,svc,percent_change,high_threshold,NULL);
 #endif
 
 	/* see if we should check to send a recovery notification out when flapping stops */
@@ -315,7 +316,7 @@ void set_service_flap(service *svc, double percent_change, double high_threshold
 
 
 /* handles a service that has stopped flapping */
-void clear_service_flap(service *svc, double percent_change, double high_threshold, double low_threshold){
+void clear_service_flap(service *svc, double percent_change, double low_threshold){
 	char buffer[MAX_INPUT_BUFFER];
 
 #ifdef DEBUG0
@@ -337,7 +338,7 @@ void clear_service_flap(service *svc, double percent_change, double high_thresho
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	broker_flapping_data(NEBTYPE_FLAPPING_STOP,NEBFLAG_NONE,NEBATTR_FLAPPING_STOP_NORMAL,SERVICE_FLAPPING,svc,percent_change,high_threshold,low_threshold,NULL);
+	broker_flapping_data(NEBTYPE_FLAPPING_STOP,NEBFLAG_NONE,NEBATTR_FLAPPING_STOP_NORMAL,SERVICE_FLAPPING,svc,percent_change,low_threshold,NULL);
 #endif
 
 	/* should we send a recovery notification? */
@@ -359,7 +360,7 @@ void clear_service_flap(service *svc, double percent_change, double high_thresho
 
 
 /* handles a host that is flapping */
-void set_host_flap(host *hst, double percent_change, double high_threshold, double low_threshold){
+void set_host_flap(host *hst, double percent_change, double high_threshold){
 	char buffer[MAX_INPUT_BUFFER];
 
 #ifdef DEBUG0
@@ -372,7 +373,7 @@ void set_host_flap(host *hst, double percent_change, double high_threshold, doub
 	write_to_all_logs(buffer,NSLOG_RUNTIME_WARNING);
 
 	/* add a non-persistent comment to the host */
-	snprintf(buffer,sizeof(buffer)-1,"Notifications for this host are being suppressed because it was detected as having been flapping between different states (%2.1f%% change > %2.1f%% threshold).  When the host state stabilizes and the flapping stops, notifications will be re-enabled.",percent_change,high_threshold);
+	snprintf(buffer,sizeof(buffer)-1,"Notifications for this host are being supressed because it was detected as having been flapping between different states (%2.1f%% change > %2.1f%% threshold).  When the host state stabilizes and the flapping stops, notifications will be re-enabled.",percent_change,high_threshold);
 	buffer[sizeof(buffer)-1]='\x0';
 	add_new_host_comment(FLAPPING_COMMENT,hst->name,time(NULL),"(Nagios Process)",buffer,0,COMMENTSOURCE_INTERNAL,FALSE,(time_t)0,&(hst->flapping_comment_id));
 
@@ -381,7 +382,7 @@ void set_host_flap(host *hst, double percent_change, double high_threshold, doub
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	broker_flapping_data(NEBTYPE_FLAPPING_START,NEBFLAG_NONE,NEBATTR_NONE,HOST_FLAPPING,hst,percent_change,high_threshold,low_threshold,NULL);
+	broker_flapping_data(NEBTYPE_FLAPPING_START,NEBFLAG_NONE,NEBATTR_NONE,HOST_FLAPPING,hst,percent_change,high_threshold,NULL);
 #endif
 
 	/* see if we should check to send a recovery notification out when flapping stops */
@@ -402,7 +403,7 @@ void set_host_flap(host *hst, double percent_change, double high_threshold, doub
 
 
 /* handles a host that has stopped flapping */
-void clear_host_flap(host *hst, double percent_change, double high_threshold, double low_threshold){
+void clear_host_flap(host *hst, double percent_change, double low_threshold){
 	char buffer[MAX_INPUT_BUFFER];
 
 #ifdef DEBUG0
@@ -424,7 +425,7 @@ void clear_host_flap(host *hst, double percent_change, double high_threshold, do
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	broker_flapping_data(NEBTYPE_FLAPPING_STOP,NEBFLAG_NONE,NEBATTR_FLAPPING_STOP_NORMAL,HOST_FLAPPING,hst,percent_change,high_threshold,low_threshold,NULL);
+	broker_flapping_data(NEBTYPE_FLAPPING_STOP,NEBFLAG_NONE,NEBATTR_FLAPPING_STOP_NORMAL,HOST_FLAPPING,hst,percent_change,low_threshold,NULL);
 #endif
 
 	/* should we send a recovery notification? */
@@ -560,7 +561,7 @@ void disable_host_flap_detection(host *hst){
 
 #ifdef USE_EVENT_BROKER
 		/* send data to event broker */
-		broker_flapping_data(NEBTYPE_FLAPPING_STOP,NEBFLAG_NONE,NEBATTR_FLAPPING_STOP_DISABLED,HOST_FLAPPING,hst,hst->percent_state_change,0.0,0.0,NULL);
+		broker_flapping_data(NEBTYPE_FLAPPING_STOP,NEBFLAG_NONE,NEBATTR_FLAPPING_STOP_DISABLED,HOST_FLAPPING,hst,hst->percent_state_change,0.0,NULL);
 #endif
 	        }
 
@@ -644,7 +645,7 @@ void disable_service_flap_detection(service *svc){
 
 #ifdef USE_EVENT_BROKER
 		/* send data to event broker */
-		broker_flapping_data(NEBTYPE_FLAPPING_STOP,NEBFLAG_NONE,NEBATTR_FLAPPING_STOP_DISABLED,SERVICE_FLAPPING,svc,svc->percent_state_change,0.0,0.0,NULL);
+		broker_flapping_data(NEBTYPE_FLAPPING_STOP,NEBFLAG_NONE,NEBATTR_FLAPPING_STOP_DISABLED,SERVICE_FLAPPING,svc,svc->percent_state_change,0.0,NULL);
 #endif
 	        }
 

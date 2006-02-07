@@ -2,14 +2,15 @@
  *
  * EVENTS.C - Timed event functions for Nagios
  *
- * Copyright (c) 1999-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   01-12-2006
+ * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   01-10-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -321,7 +322,7 @@ void init_timing_loop(void){
 		printf("\tCurrent Interleave Block: %d\n",current_interleave_block);
 #endif
 
-		for(interleave_block_index=0;interleave_block_index<scheduling_info.service_interleave_factor && temp_service!=NULL;temp_service=temp_service->next){
+		for(interleave_block_index=0;interleave_block_index<scheduling_info.service_interleave_factor && temp_service!=NULL;temp_service=temp_service->next,interleave_block_index++){
 
 			/* skip this service if it shouldn't be scheduled */
 			if(temp_service->should_be_scheduled==FALSE)
@@ -330,10 +331,6 @@ void init_timing_loop(void){
 			/* skip services that are already scheduled (from retention data) */
 			if(temp_service->next_check!=(time_t)0)
 				continue;
-
-			/* interleave block index should only be increased when we find a schedulable service */
-			/* moved from for() loop 11/05/05 EG */
-			interleave_block_index++;
 
 			mult_factor=current_interleave_block+(interleave_block_index*total_interleave_blocks);
 
@@ -370,7 +367,7 @@ void init_timing_loop(void){
 		current_interleave_block++;
 	        }
 
-	/* add scheduled service checks to event queue */
+	/* add scheduled host checks to event queue */
 	for(temp_service=service_list;temp_service!=NULL;temp_service=temp_service->next){
 
 		/* skip services that shouldn't be scheduled */
@@ -885,7 +882,6 @@ void remove_event(timed_event *event,timed_event **event_list){
 /* this is the main event handler loop */
 int event_execution_loop(void){
 	timed_event *temp_event;
-	timed_event sleep_event;
 	time_t last_time;
 	time_t current_time;
 	int run_event=TRUE;
@@ -899,16 +895,6 @@ int event_execution_loop(void){
 #endif
 
 	time(&last_time);
-
-	/* initialize fake "sleep" event */
-	sleep_event.event_type=EVENT_SLEEP;
-	sleep_event.run_time=last_time;
-	sleep_event.recurring=FALSE;
-	sleep_event.event_interval=0L;
-	sleep_event.compensate_for_time_change=FALSE;
-	sleep_event.timing_func=FALSE;
-	sleep_event.event_data=FALSE;
-	sleep_event.event_args=FALSE;
 
 	while(1){
 
@@ -994,17 +980,12 @@ int event_execution_loop(void){
 #endif
 
 					/* remove the service check from the event queue and reschedule it for a later time */
-					/* 12/20/05 since event was not executed, it needs to be remove()'ed to maintain sync with event broker modules */
 					temp_event=event_list_low;
-					remove_event(temp_event,&event_list_low);
-					/*
 					event_list_low=event_list_low->next;
-					*/
 					if(temp_service->state_type==SOFT_STATE && temp_service->current_state!=STATE_OK)
 						temp_service->next_check=(time_t)(temp_service->next_check+(temp_service->retry_interval*interval_length));
 					else
 						temp_service->next_check=(time_t)(temp_service->next_check+(temp_service->check_interval*interval_length));
-					temp_event->run_time=temp_service->next_check;
 					reschedule_event(temp_event,&event_list_low);
 					update_service_status(temp_service,FALSE);
 
@@ -1036,7 +1017,7 @@ int event_execution_loop(void){
 				        }
 			        }
 
-			/* run a few checks before executing a host check... */
+			/* run a few checks before executing ahost check... */
 			if(event_list_low->event_type==EVENT_HOST_CHECK){
 
 				temp_host=(host *)event_list_low->event_data;
@@ -1052,14 +1033,9 @@ int event_execution_loop(void){
 #endif
 
 					/* remove the host check from the event queue and reschedule it for a later time */
-					/* 12/20/05 since event was not executed, it needs to be remove()'ed to maintain sync with event broker modules */
 					temp_event=event_list_low;
-					remove_event(temp_event,&event_list_low);
-					/*
 					event_list_low=event_list_low->next;
-					*/
 					temp_host->next_check=(time_t)(temp_host->next_check+(temp_host->check_interval*interval_length));
-					temp_event->run_time=temp_host->next_check;
 					reschedule_event(temp_event,&event_list_low);
 					update_host_status(temp_host,FALSE);
 
@@ -1088,55 +1064,24 @@ int event_execution_loop(void){
 
 			/* wait a while so we don't hog the CPU... */
 			else{
-#ifdef USE_NANOSLEEP
 				delay.tv_sec=(time_t)sleep_time;
 				delay.tv_nsec=(long)((sleep_time-(double)delay.tv_sec)*1000000000);
 				nanosleep(&delay,NULL);
-#else
-				delay.tv_sec=(time_t)sleep_time;
-				if(delay.tv_sec==0L)
-					delay.tv_sec=1;
-				delay.tv_nsec=0L;
-				sleep((unsigned int)delay.tv_sec);
-#endif
 			        }
 		        }
 
 		/* we don't have anything to do at this moment in time... */
-		else if((event_list_high==NULL || (current_time<event_list_high->run_time)) && (event_list_low==NULL || (current_time<event_list_low->run_time))){
+		else{
 
 			/* check for external commands if we're supposed to check as often as possible */
 			if(command_check_interval==-1)
 				check_for_external_commands();
 
-			/* set time to sleep so we don't hog the CPU... */
-#ifdef USE_NANOSLEEP
+			/* wait a while so we don't hog the CPU... */
 			delay.tv_sec=(time_t)sleep_time;
 			delay.tv_nsec=(long)((sleep_time-(double)delay.tv_sec)*1000000000);
-#else
-			delay.tv_sec=(time_t)sleep_time;
-			if(delay.tv_sec==0L)
-				delay.tv_sec=1;
-			delay.tv_nsec=0L;
-#endif
-
-#ifdef USE_EVENT_BROKER
-			/* populate fake "sleep" event */
-			sleep_event.run_time=current_time;
-			sleep_event.event_data=(void *)&delay;
-
-			/* send event data to broker */
-			broker_timed_event(NEBTYPE_TIMEDEVENT_SLEEP,NEBFLAG_NONE,NEBATTR_NONE,&sleep_event,NULL);
-#endif
-
-			/* wait a while so we don't hog the CPU... */
-#ifdef USE_NANOSLEEP
 			nanosleep(&delay,NULL);
-#else
-			sleep((unsigned int)delay.tv_sec);
-#endif
 		        }
-
 	        }
 
 #ifdef DEBUG0
@@ -1323,15 +1268,6 @@ int handle_timed_event(timed_event *event){
 
 		/* adjust scheduling of host and service checks */
 		adjust_check_scheduling();
-		break;
-
-	case EVENT_EXPIRE_COMMENT:
-#ifdef DEBUG3
-		printf("(expire comment)\n");
-#endif
-
-		/* check for expired comment */
-		check_for_expired_comment((unsigned long)event->event_data);
 		break;
 
 	case EVENT_USER_FUNCTION:

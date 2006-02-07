@@ -3,13 +3,14 @@
  * XRDDEFAULT.C - Default external state retention routines for Nagios
  *
  * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   05-07-2005
+ * Last Modified:   01-10-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -68,7 +69,6 @@ extern unsigned long  modified_service_process_attributes;
 
 
 char xrddefault_retention_file[MAX_FILENAME_LENGTH]="";
-char xrddefault_temp_file[MAX_FILENAME_LENGTH]="";
 
 
 
@@ -85,9 +85,7 @@ int xrddefault_grab_config_info(char *main_config_file){
 
 	/* initialize the location of the retention file */
 	strncpy(xrddefault_retention_file,DEFAULT_RETENTION_FILE,sizeof(xrddefault_retention_file)-1);
-	strncpy(xrddefault_temp_file,DEFAULT_TEMP_FILE,sizeof(xrddefault_temp_file)-1);
 	xrddefault_retention_file[sizeof(xrddefault_retention_file)-1]='\x0';
-	xrddefault_temp_file[sizeof(xrddefault_temp_file)-1]='\x0';
 
 	/* open the main config file for reading */
 	if((thefile=mmap_fopen(main_config_file))==NULL){
@@ -151,13 +149,12 @@ int xrddefault_grab_config_info(char *main_config_file){
 
 int xrddefault_save_state_information(char *main_config_file){
 	char temp_buffer[MAX_INPUT_BUFFER];
-	char temp_file[MAX_FILENAME_LENGTH];
 	time_t current_time;
 	int result=OK;
-	FILE *fp=NULL;
+	FILE *fp;
 	host *temp_host=NULL;
 	service *temp_service=NULL;
-	int x, fd=0;
+	int x;
 
 #ifdef DEBUG0
 	printf("xrddefault_save_state_information() start\n");
@@ -173,18 +170,11 @@ int xrddefault_save_state_information(char *main_config_file){
 		return ERROR;
 	        }
 
-	/* open a safe temp file for output */
-	snprintf(temp_file,sizeof(temp_file)-1,"%sXXXXXX",xrddefault_temp_file);
-	temp_file[sizeof(temp_file)-1]='\x0';
-	if((fd=mkstemp(temp_file))==-1)
-		return ERROR;
-	fp=fdopen(fd,"w");
+	/* open the retention file for writing */
+	fp=fopen(xrddefault_retention_file,"w");
 	if(fp==NULL){
 
-		close(fd);
-		unlink(temp_file);
-
-		snprintf(temp_buffer,sizeof(temp_buffer)-1,"Error: Could not open temp state retention file '%s' for writing!\n",temp_file);
+		snprintf(temp_buffer,sizeof(temp_buffer)-1,"Error: Could not open state retention file '%s' for writing!\n",xrddefault_retention_file);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_ERROR,TRUE);
 
@@ -239,7 +229,6 @@ int xrddefault_save_state_information(char *main_config_file){
 		fprintf(fp,"\thas_been_checked=%d\n",temp_host->has_been_checked);
 		fprintf(fp,"\tcheck_execution_time=%.3f\n",temp_host->execution_time);
 		fprintf(fp,"\tcheck_latency=%.3f\n",temp_host->latency);
-		fprintf(fp,"\tcheck_type=%d\n",temp_host->check_type);
 		fprintf(fp,"\tcurrent_state=%d\n",temp_host->current_state);
 		fprintf(fp,"\tlast_state=%d\n",temp_host->last_state);
 		fprintf(fp,"\tlast_hard_state=%d\n",temp_host->last_hard_state);
@@ -293,7 +282,6 @@ int xrddefault_save_state_information(char *main_config_file){
 		fprintf(fp,"\thas_been_checked=%d\n",temp_service->has_been_checked);
 		fprintf(fp,"\tcheck_execution_time=%.3f\n",temp_service->execution_time);
 		fprintf(fp,"\tcheck_latency=%.3f\n",temp_service->latency);
-		fprintf(fp,"\tcheck_type=%d\n",temp_service->check_type);
 		fprintf(fp,"\tcurrent_state=%d\n",temp_service->current_state);
 		fprintf(fp,"\tlast_state=%d\n",temp_service->last_state);
 		fprintf(fp,"\tlast_hard_state=%d\n",temp_service->last_hard_state);
@@ -312,6 +300,7 @@ int xrddefault_save_state_information(char *main_config_file){
 		fprintf(fp,"\tperformance_data=%s\n",(temp_service->perf_data==NULL)?"":temp_service->perf_data);
 		fprintf(fp,"\tlast_check=%lu\n",temp_service->last_check);
 		fprintf(fp,"\tnext_check=%lu\n",temp_service->next_check);
+		fprintf(fp,"\tcheck_type=%d\n",temp_service->check_type);
 		fprintf(fp,"\tnotified_on_unknown=%d\n",temp_service->notified_on_unknown);
 		fprintf(fp,"\tnotified_on_warning=%d\n",temp_service->notified_on_warning);
 		fprintf(fp,"\tnotified_on_critical=%d\n",temp_service->notified_on_critical);
@@ -340,9 +329,6 @@ int xrddefault_save_state_information(char *main_config_file){
 
 	fclose(fp);
 
-	/* move the temp file to the retention file (overwrite the old retention file) */
-	if(my_rename(temp_file,xrddefault_retention_file))
-		return ERROR;
 
 
 #ifdef DEBUG0
@@ -636,8 +622,6 @@ int xrddefault_read_state_information(char *main_config_file){
 							temp_host->execution_time=strtod(val,NULL);
 						else if(!strcmp(var,"check_latency"))
 							temp_host->latency=strtod(val,NULL);
-						else if(!strcmp(var,"check_type"))
-							temp_host->check_type=atoi(val);
 						else if(!strcmp(var,"current_state"))
 							temp_host->current_state=atoi(val);
 						else if(!strcmp(var,"last_state"))
@@ -798,8 +782,6 @@ int xrddefault_read_state_information(char *main_config_file){
 							temp_service->execution_time=strtod(val,NULL);
 						else if(!strcmp(var,"check_latency"))
 							temp_service->latency=strtod(val,NULL);
-						else if(!strcmp(var,"check_type"))
-							temp_service->check_type=atoi(val);
 						else if(!strcmp(var,"current_state"))
 							temp_service->current_state=atoi(val);
 						else if(!strcmp(var,"last_state"))
@@ -836,6 +818,8 @@ int xrddefault_read_state_information(char *main_config_file){
 							if(use_retained_scheduling_info==TRUE && scheduling_info_is_ok==TRUE)
 								temp_service->next_check=strtoul(val,NULL,10);
 						        }
+						else if(!strcmp(var,"check_type"))
+							temp_service->check_type=atoi(val);
 						else if(!strcmp(var,"notified_on_unknown"))
 							temp_service->notified_on_unknown=(atoi(val)>0)?TRUE:FALSE;
 						else if(!strcmp(var,"notified_on_warning"))

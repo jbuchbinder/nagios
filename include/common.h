@@ -2,13 +2,14 @@
  *
  * Nagios Common Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 12-01-2005
+ * Last Modified: 02-02-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,24 +22,8 @@
  ************************************************************************/
 
 
-#define PROGRAM_VERSION "2.0"
-#define PROGRAM_MODIFICATION_DATE "02-07-2006"
-
-
-
-/* daemon is thread safe */
-#ifdef NSCORE
-#ifndef _REENTRANT
-#define _REENTRANT
-#endif
-#ifndef _THREAD_SAFE
-#define _THREAD_SAFE
-#endif
-#endif
-
-/* Experimental performance tweaks - use with caution */
-#undef USE_MEMORY_PERFORMANCE_TWEAKS
-
+#define PROGRAM_VERSION "2.0b2"
+#define PROGRAM_MODIFICATION_DATE "02-09-2005"
 
 
 /***************************** COMMANDS *********************************/
@@ -253,9 +238,6 @@
 #define CMD_ENABLE_HOST_FRESHNESS_CHECKS                140
 #define CMD_DISABLE_HOST_FRESHNESS_CHECKS               141
 
-#define CMD_SET_HOST_NOTIFICATION_NUMBER                142
-#define CMD_SET_SVC_NOTIFICATION_NUMBER                 143
-
 
 
 /************************ SERVICE CHECK TYPES ****************************/
@@ -284,9 +266,6 @@
 
 
 /************************** ACKNOWLEDGEMENT TYPES ************************/
-
-#define HOST_ACKNOWLEDGEMENT            0
-#define SERVICE_ACKNOWLEDGEMENT         1
 
 #define ACKNOWLEDGEMENT_NONE            0
 #define ACKNOWLEDGEMENT_NORMAL          1
@@ -325,17 +304,8 @@
 #define	OK				0
 #define ERROR				-2	/* value was changed from -1 so as to not interfere with STATUS_UNKNOWN plugin result */
 
-
-#ifndef TRUE
 #define TRUE				1
-#elif (TRUE!=1)
-#define TRUE				1
-#endif
-#ifndef FALSE
 #define FALSE				0
-#elif (FALSE!=0)
-#define FALSE				0
-#endif
 
 
 /****************** HOST CONFIG FILE READING OPTIONS ********************/
@@ -380,7 +350,7 @@
 
 #define MAX_FILENAME_LENGTH			256	/* max length of path/filename that Nagios will process */
 #define MAX_INPUT_BUFFER			1024	/* size in bytes of max. input buffer (for reading files) */
-#define MAX_COMMAND_BUFFER                      8192    /* max length of raw or processed command line */
+#define MAX_COMMAND_BUFFER                      32768    /* max length of raw or processed command line */
 
 #define MAX_DATETIME_LENGTH			48
 

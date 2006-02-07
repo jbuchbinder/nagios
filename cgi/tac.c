@@ -8,11 +8,11 @@
  * This CGI program will display the contents of the Nagios
  * log file.
  *
- * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -1238,7 +1238,7 @@ void display_tac_overview(void){
 
 	printf("<table class='tac' width=641 cellspacing=4 cellpadding=0 border=0>\n");
 
-	printf("<tr><td colspan=5 height=20 class='serviceTitle'>&nbsp;Services</td></tr>\n");
+	printf("<tr><td colspan=5 height=20 class='hostTitle'>&nbsp;Services</td></tr>\n");
 
 	printf("<tr>\n");
 	printf("<td class='serviceHeader' width=125><a href='%s?host=all&stye=detail&servicestatustypes=%d' class='serviceHeader'>%d Critical</a></td>\n",STATUS_CGI,SERVICE_CRITICAL,services_critical);

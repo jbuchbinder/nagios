@@ -2,14 +2,15 @@
  *
  * STATUSDATA.C - External status data for Nagios CGIs
  *
- * Copyright (c) 2000-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   07-25-2005
+ * Copyright (c) 2000-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   10-24-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -41,6 +42,9 @@
 
 #ifdef USE_XSDDEFAULT
 #include "../xdata/xsddefault.h"		/* default routines */
+#endif
+#ifdef USE_XSDDB
+#include "../xdata/xsddb.h"                     /* database routines */
 #endif
 
 
@@ -74,6 +78,9 @@ int initialize_status_data(char *config_file){
 #ifdef USE_XSDDEFAULT
 	result=xsddefault_initialize_status_data(config_file);
 #endif
+#ifdef USE_XSDDB
+	result=xsddb_initialize_status_data(config_file);
+#endif
 
 	return result;
         }
@@ -83,19 +90,12 @@ int initialize_status_data(char *config_file){
 int update_all_status_data(void){
 	int result;
 
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_aggregated_status_data(NEBTYPE_AGGREGATEDSTATUS_STARTDUMP,NEBFLAG_NONE,NEBATTR_NONE,NULL);
-#endif
-
 	/**** IMPLEMENTATION-SPECIFIC CALLS ****/
 #ifdef USE_XSDDEFAULT
 	result=xsddefault_save_status_data();
 #endif
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_aggregated_status_data(NEBTYPE_AGGREGATEDSTATUS_ENDDUMP,NEBFLAG_NONE,NEBATTR_NONE,NULL);
+#ifdef USE_XSDDB
+	result=xsddb_save_status_data();
 #endif
 
 	if(result!=OK)
@@ -113,6 +113,9 @@ int cleanup_status_data(char *config_file,int delete_status_data){
 #ifdef USE_XSDDEFAULT
 	result=xsddefault_cleanup_status_data(config_file,delete_status_data);
 #endif
+#ifdef USE_XSDDB
+	result=xsddb_cleanup_status_data(config_file,delete_status_data);
+#endif
 
 	return result;
         }
@@ -123,9 +126,8 @@ int cleanup_status_data(char *config_file,int delete_status_data){
 int update_program_status(int aggregated_dump){
 
 #ifdef USE_EVENT_BROKER
-	/* send data to event broker (non-aggregated dumps only) */
-	if(aggregated_dump==FALSE)
-	        broker_program_status(NEBTYPE_PROGRAMSTATUS_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,NULL);
+	/* send data to event broker */
+	broker_program_status(NEBTYPE_PROGRAMSTATUS_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,NULL);
 #endif
 
 	/* currently a noop if aggregated updates is TRUE */
@@ -143,9 +145,8 @@ int update_program_status(int aggregated_dump){
 int update_host_status(host *hst,int aggregated_dump){
 
 #ifdef USE_EVENT_BROKER
-	/* send data to event broker (non-aggregated dumps only) */
-	if(aggregated_dump==FALSE)
-	          broker_host_status(NEBTYPE_HOSTSTATUS_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,hst,NULL);
+	/* send data to event broker */
+	broker_host_status(NEBTYPE_HOSTSTATUS_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,hst,NULL);
 #endif
 
 	/* currently a noop if aggregated updates is TRUE */
@@ -163,9 +164,8 @@ int update_host_status(host *hst,int aggregated_dump){
 int update_service_status(service *svc,int aggregated_dump){
 
 #ifdef USE_EVENT_BROKER
-	/* send data to event broker (non-aggregated dumps only) */
-	if(aggregated_dump==FALSE)
-	        broker_service_status(NEBTYPE_SERVICESTATUS_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,svc,NULL);
+	/* send data to event broker */
+	broker_service_status(NEBTYPE_SERVICESTATUS_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,svc,NULL);
 #endif
 
 	/* currently a noop if aggregated updates is TRUE */
