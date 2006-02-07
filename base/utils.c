@@ -2,8 +2,8 @@
  *
  * UTILS.C - Miscellaneous utility functions for Nagios
  *
- * Copyright (c) 1999-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   01-02-2006
+ * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   12-16-2005
  *
  * License:
  *
@@ -4546,7 +4546,7 @@ int init_embedded_perl(char **env){
 
 	use_embedded_perl=TRUE;
 
-	PERL_SYS_INIT3(&argc,&embedding,&env);
+	PERL_SYS_INIT3(&argc,embedding,&env);
 
 	if((my_perl=perl_alloc())==NULL){
 		use_embedded_perl=FALSE;
@@ -5052,24 +5052,6 @@ int submit_raw_external_command(char *cmd, time_t *ts, int *buffer_items){
 	return result;
         }
 
-
-
-/******************************************************************/
-/************************* MISC FUNCTIONS *************************/
-/******************************************************************/
-
-/* returns Nagios version */
-char *get_program_version(void){
-
-	return (char *)PROGRAM_VERSION;
-        }
-
-
-/* returns Nagios modification date */
-char *get_program_modification_date(void){
-
-	return (char *)PROGRAM_MODIFICATION_DATE;
-        }
 
 
 
