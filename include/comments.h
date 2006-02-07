@@ -2,7 +2,8 @@
  *
  * COMMENTS.H - Header file for comment functions
  *
- * Last Modified:   12-15-2005
+ * Copyright (c) 1999-2003 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   08-27-2003
  *
  * License:
  *
@@ -29,10 +30,6 @@
 #include "common.h"
 #include "objects.h"
 
-
-#ifdef __cplusplus
-  extern "C" {
-#endif
 
 /**************************** COMMENT SOURCES ******************************/
 
@@ -95,7 +92,6 @@ int delete_service_comment(unsigned long);                          /* deletes a
 int delete_all_comments(int,char *,char *);                         /* deletes all comments for a particular host or service */
 int delete_all_host_comments(char *);                               /* deletes all comments for a specific host */
 int delete_all_service_comments(char *,char *);                     /* deletes all comments for a specific service */
-int check_for_expired_comment(unsigned long);                       /* expires a comment */
 #endif
 
 comment *find_comment(unsigned long,int);                             /* finds a specific comment */
@@ -118,8 +114,11 @@ int add_comment_to_hashlist(comment *);
 
 void free_comment_data(void);                                             /* frees memory allocated to the comment list */
 
-#ifdef __cplusplus
-  }
 #endif
 
-#endif
+
+
+
+
+
+

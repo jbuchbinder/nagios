@@ -3,7 +3,7 @@
  * CMD.C -  Nagios Command CGI
  *
  * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 11-23-2005
+ * Last Modified: 02-02-2005
  *
  * License:
  * 
@@ -46,7 +46,6 @@ extern int  use_authentication;
 extern scheduled_downtime *scheduled_downtime_list;
 extern comment *comment_list;
 
-extern int date_format;
 
 
 #define MAX_AUTHOR_LENGTH	64
@@ -62,8 +61,6 @@ char *servicegroup_name="";
 char *service_desc="";
 char *comment_author="";
 char *comment_data="";
-char *start_time_string="";
-char *end_time_string="";
 
 unsigned long comment_id=0;
 unsigned long downtime_id=0;
@@ -105,6 +102,7 @@ void document_header(int);
 void document_footer(void);
 int process_cgivars(void);
 
+int time_to_string(time_t *,char *,int);
 int string_to_time(char *,time_t *);
 
 
@@ -141,14 +139,6 @@ int main(void){
 		document_footer();
 		return ERROR;
 	        }
-
-	/* This requires the date_format parameter in the main config file */
-	if (strcmp(start_time_string,""))
-		string_to_time(start_time_string,&start_time);
-
-	if (strcmp(end_time_string,""))
-		string_to_time(end_time_string,&end_time);
-
 
 	/* read all object configuration data */
 	result=read_all_object_configuration_data(main_config_file,READ_ALL_OBJECT_DATA);
@@ -597,11 +587,7 @@ int process_cgivars(void){
 				break;
 			        }
 
-			start_time_string=(char *)malloc(strlen(variables[x])+1);
-			if(start_time_string==NULL)
-				start_time_string="";
-			else
-				strcpy(start_time_string,variables[x]);
+			string_to_time(variables[x],&start_time);
 		        }
 
 		/* we found the end time */
@@ -612,11 +598,7 @@ int process_cgivars(void){
 				break;
 			        }
 
-			end_time_string=(char *)malloc(strlen(variables[x])+1);
-			if(end_time_string==NULL)
-				end_time_string="";
-			else
-				strcpy(end_time_string,variables[x]);
+			string_to_time(variables[x],&end_time);
 		        }
 
 		/* we found the content type argument */
@@ -1015,7 +997,7 @@ void request_command_data(int cmd){
 			printf("</b></td></tr>\n");
 		        }
 		time(&t);
-		get_time_string(&t,buffer,sizeof(buffer)-1,SHORT_DATE_TIME);
+		time_to_string(&t,buffer,sizeof(buffer)-1);
 		printf("<tr><td CLASS='optBoxRequiredItem'>Check Time:</td><td><b>");
 		printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>",buffer);
 		printf("</b></td></tr>\n");
@@ -1187,12 +1169,12 @@ void request_command_data(int cmd){
 		printf("<tr><td CLASS='optBoxItem'><br></td></tr>\n");
 
 		time(&t);
-		get_time_string(&t,buffer,sizeof(buffer)-1,SHORT_DATE_TIME);
+		time_to_string(&t,buffer,sizeof(buffer)-1);
 		printf("<tr><td CLASS='optBoxRequiredItem'>Start Time:</td><td><b>");
 		printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>",buffer);
 		printf("</b></td></tr>\n");
 		t+=(unsigned long)7200;
-		get_time_string(&t,buffer,sizeof(buffer)-1,SHORT_DATE_TIME);
+		time_to_string(&t,buffer,sizeof(buffer)-1);
 		printf("<tr><td CLASS='optBoxRequiredItem'>End Time:</td><td><b>");
 		printf("<INPUT TYPE='TEXT' NAME='end_time' VALUE='%s'>",buffer);
 		printf("</b></td></tr>\n");
@@ -1290,12 +1272,12 @@ void request_command_data(int cmd){
 		printf("<INPUT TYPE='TEXT' NAME='com_data' VALUE='%s' SIZE=40>",comment_data);
 		printf("</b></td></tr>\n");
 		time(&t);
-		get_time_string(&t,buffer,sizeof(buffer)-1,SHORT_DATE_TIME);
+		time_to_string(&t,buffer,sizeof(buffer)-1);
 		printf("<tr><td CLASS='optBoxRequiredItem'>Start Time:</td><td><b>");
 		printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>",buffer);
 		printf("</b></td></tr>\n");
 		t+=(unsigned long)7200;
-		get_time_string(&t,buffer,sizeof(buffer)-1,SHORT_DATE_TIME);
+		time_to_string(&t,buffer,sizeof(buffer)-1);
 		printf("<tr><td CLASS='optBoxRequiredItem'>End Time:</td><td><b>");
 		printf("<INPUT TYPE='TEXT' NAME='end_time' VALUE='%s'>",buffer);
 		printf("</b></td></tr>\n");
@@ -2628,7 +2610,19 @@ void show_command_help(cmd){
 
 
 
-/* converts a time string to a UNIX timestamp, respecting the date_format option */
+/* converts a UNIX timestamp to a string we can use */
+int time_to_string(time_t *t, char *buffer, int buffer_length){
+	struct tm *lt;
+
+	lt=localtime(t);
+	snprintf(buffer,buffer_length-1,"%02d/%02d/%04d %02d:%02d:%02d",lt->tm_mon+1,lt->tm_mday,lt->tm_year+1900,lt->tm_hour,lt->tm_min,lt->tm_sec);
+	buffer[buffer_length-1]='\x0';
+
+	return OK;
+        }
+
+
+/* converts a time string to a UNIX timestamp */
 int string_to_time(char *buffer, time_t *t){
 	struct tm lt;
 
@@ -2647,12 +2641,7 @@ int string_to_time(char *buffer, time_t *t){
 	lt.tm_wday=0;
 	lt.tm_yday=0;
 
-	if(date_format==DATE_FORMAT_EURO)
-		sscanf(buffer,"%02d-%02d-%04d %02d:%02d:%02d",&lt.tm_mday,&lt.tm_mon,&lt.tm_year,&lt.tm_hour,&lt.tm_min,&lt.tm_sec);
-	else if(date_format==DATE_FORMAT_ISO8601 || date_format==DATE_FORMAT_STRICT_ISO8601)
-		sscanf(buffer,"%04d-%02d-%02d%*[ T]%02d:%02d:%02d",&lt.tm_year,&lt.tm_mon,&lt.tm_mday,&lt.tm_hour,&lt.tm_min,&lt.tm_sec);
-	else
-		sscanf(buffer,"%02d-%02d-%04d %02d:%02d:%02d",&lt.tm_mon,&lt.tm_mday,&lt.tm_year,&lt.tm_hour,&lt.tm_min,&lt.tm_sec);
+	sscanf(buffer,"%02d/%02d/%04d %02d:%02d:%02d",&lt.tm_mon,&lt.tm_mday,&lt.tm_year,&lt.tm_hour,&lt.tm_min,&lt.tm_sec);
 
 	lt.tm_mon--;
 	lt.tm_year-=1900;

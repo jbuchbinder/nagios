@@ -2,7 +2,7 @@
  *
  * CGIAUTH.H - Authorization utilities header file
  *
- * Last Modified:   11-24-2005
+ * Last Modified:   08-14-2003
  *
  * License:
  *
@@ -28,9 +28,6 @@
 #include "objects.h"
 
 
-#ifdef __cplusplus
-  extern "C" {
-#endif
 
 typedef struct authdata_struct{
 	char *username;
@@ -64,8 +61,5 @@ int is_authorized_for_servicegroup(servicegroup *,authdata *);
 
 int is_authorized_for_configuration_information(authdata *);
 
-#ifdef __cplusplus
-  }
-#endif
 
 #endif

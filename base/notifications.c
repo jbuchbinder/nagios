@@ -57,9 +57,6 @@ int service_notification(service *svc, int type, char *ack_author, char *ack_dat
 	host *temp_host;
 	notification *temp_notification;
 	time_t current_time;
-	struct timeval start_time;
-	struct timeval end_time;
-	int escalated=FALSE;
 	int result=OK;
 	int contacts_notified=0;
 
@@ -69,7 +66,6 @@ int service_notification(service *svc, int type, char *ack_author, char *ack_dat
 
 	/* get the current time */
 	time(&current_time);
-	gettimeofday(&start_time,NULL);
 
 #ifdef DEBUG4
 	printf("\nSERVICE NOTIFICATION ATTEMPT: Service '%s' on host '%s'\n",svc->description,svc->host_name);
@@ -108,15 +104,13 @@ int service_notification(service *svc, int type, char *ack_author, char *ack_dat
 
 	        }
 
-	/* create the contact notification list for this service */
-	create_notification_list_from_service(svc,&escalated);
-
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_notification_data(NEBTYPE_NOTIFICATION_START,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_NOTIFICATION,type,start_time,end_time,(void *)svc,ack_author,ack_data,escalated,0,NULL);
+	broker_notification_data(NEBTYPE_NOTIFICATION_START,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_NOTIFICATION,type,(void *)svc,ack_author,ack_data,0,NULL);
 #endif
+
+	/* create the contact notification list for this service */
+	create_notification_list_from_service(svc);
 
 	/* we have contacts to notify... */
 	if(notification_list!=NULL){
@@ -178,7 +172,7 @@ int service_notification(service *svc, int type, char *ack_author, char *ack_dat
 			grab_summary_macros(temp_notification->contact);
 
 			/* notify this contact */
-			result=notify_contact_of_service(temp_notification->contact,svc,type,ack_author,ack_data,escalated);
+			result=notify_contact_of_service(temp_notification->contact,svc,type);
 
 			/* keep track of how many contacts were notified */
 			if(result==OK)
@@ -233,12 +227,9 @@ int service_notification(service *svc, int type, char *ack_author, char *ack_dat
 #endif
 	        }
 
-	/* get the time we finished */
-	gettimeofday(&end_time,NULL);
-
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	broker_notification_data(NEBTYPE_NOTIFICATION_END,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_NOTIFICATION,type,start_time,end_time,(void *)svc,ack_author,ack_data,escalated,contacts_notified,NULL);
+	broker_notification_data(NEBTYPE_NOTIFICATION_END,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_NOTIFICATION,type,(void *)svc,ack_author,ack_data,contacts_notified,NULL);
 #endif
 
 	/* update the status log with the service information */
@@ -586,7 +577,7 @@ int check_contact_service_notification_viability(contact *cntct, service *svc, i
 
 
 /* notify a specific contact about a service problem or recovery */
-int notify_contact_of_service(contact *cntct, service *svc, int type, char *ack_author, char *ack_data, int escalated){
+int notify_contact_of_service(contact *cntct, service *svc, int type){
 	commandsmember *temp_commandsmember;
 	char command_name[MAX_INPUT_BUFFER];
 	char *command_name_ptr=NULL;
@@ -595,8 +586,6 @@ int notify_contact_of_service(contact *cntct, service *svc, int type, char *ack_
 	char temp_buffer[MAX_INPUT_BUFFER];
 	int early_timeout=FALSE;
 	double exectime;
-	struct timeval start_time,end_time;
-	struct timeval method_start_time,method_end_time;
 	int macro_options=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
 
 #ifdef DEBUG0
@@ -611,28 +600,8 @@ int notify_contact_of_service(contact *cntct, service *svc, int type, char *ack_
 	if(check_contact_service_notification_viability(cntct,svc,type)==ERROR)
 		return ERROR;
 
-	/* get start time */
-	gettimeofday(&start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_contact_notification_data(NEBTYPE_CONTACTNOTIFICATION_START,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_NOTIFICATION,type,start_time,end_time,(void *)svc,cntct,ack_author,ack_data,escalated,NULL);
-#endif
-
 	/* process all the notification commands this user has */
 	for(temp_commandsmember=cntct->service_notification_commands;temp_commandsmember!=NULL;temp_commandsmember=temp_commandsmember->next){
-
-		/* get start time */
-		gettimeofday(&method_start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		method_end_time.tv_sec=0L;
-		method_end_time.tv_usec=0L;
-		broker_contact_notification_method_data(NEBTYPE_CONTACTNOTIFICATIONMETHOD_START,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_NOTIFICATION,type,method_start_time,method_end_time,(void *)svc,cntct,temp_commandsmember->command,ack_author,ack_data,escalated,NULL);
-#endif
 
 		/* get the command name */
 		strncpy(command_name,temp_commandsmember->command,sizeof(command_name));
@@ -685,23 +654,7 @@ int notify_contact_of_service(contact *cntct, service *svc, int type, char *ack_
 				write_to_logs_and_console(temp_buffer,NSLOG_SERVICE_NOTIFICATION | NSLOG_RUNTIME_WARNING,TRUE);
 			        }
 		        }
-
-		/* get end time */
-		gettimeofday(&method_end_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_contact_notification_method_data(NEBTYPE_CONTACTNOTIFICATIONMETHOD_END,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_NOTIFICATION,type,method_start_time,method_end_time,(void *)svc,cntct,temp_commandsmember->command,ack_author,ack_data,escalated,NULL);
-#endif
 	        }
-
-	/* get end time */
-	gettimeofday(&end_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_contact_notification_data(NEBTYPE_CONTACTNOTIFICATION_END,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_NOTIFICATION,type,start_time,end_time,(void *)svc,cntct,ack_author,ack_data,escalated,NULL);
-#endif
 
 #ifdef DEBUG0
 	printf("notify_contact_of_service() end\n");
@@ -796,7 +749,7 @@ int should_service_notification_be_escalated(service *svc){
 
 
 /* given a service, create a list of contacts to be notified, removing duplicates */
-int create_notification_list_from_service(service *svc, int *escalated){
+int create_notification_list_from_service(service *svc){
 	serviceescalation *temp_se;
 	contactgroupsmember *temp_group;
 	contactgroup *temp_contactgroup;
@@ -808,9 +761,6 @@ int create_notification_list_from_service(service *svc, int *escalated){
 
 	/* should this notification be escalated? */
 	if(should_service_notification_be_escalated(svc)==TRUE){
-
-		/* set the escalation flag */
-		*escalated=TRUE;
 
 		/* search all the escalation entries for valid matches */
 		for(temp_se=serviceescalation_list;temp_se!=NULL;temp_se=temp_se->next){
@@ -838,9 +788,6 @@ int create_notification_list_from_service(service *svc, int *escalated){
 
 	/* no escalation is necessary - just continue normally... */
 	else{
-
-		/* set the escalation flag */
-		*escalated=FALSE;
 
 		/* find all contacts for this service */
 		for(temp_contact=contact_list;temp_contact!=NULL;temp_contact=temp_contact->next){
@@ -870,9 +817,6 @@ int create_notification_list_from_service(service *svc, int *escalated){
 int host_notification(host *hst, int type, char *ack_author, char *ack_data){
 	notification *temp_notification;
 	time_t current_time;
-	struct timeval start_time;
-	struct timeval end_time;
-	int escalated=FALSE;
 	int result=OK;
 	int contacts_notified=0;
 
@@ -882,7 +826,6 @@ int host_notification(host *hst, int type, char *ack_author, char *ack_data){
 
 	/* get the current time */
 	time(&current_time);
-	gettimeofday(&start_time,NULL);
 
 #ifdef DEBUG4
 	printf("\nHOST NOTIFICATION ATTEMPT: Host '%s'\n",hst->name);
@@ -909,15 +852,13 @@ int host_notification(host *hst, int type, char *ack_author, char *ack_data){
 #endif
 	        }
 
-	/* create the contact notification list for this host */
-	create_notification_list_from_host(hst,&escalated);
-
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_notification_data(NEBTYPE_NOTIFICATION_START,NEBFLAG_NONE,NEBATTR_NONE,HOST_NOTIFICATION,type,start_time,end_time,(void *)hst,ack_author,ack_data,escalated,0,NULL);
+	broker_notification_data(NEBTYPE_NOTIFICATION_START,NEBFLAG_NONE,NEBATTR_NONE,HOST_NOTIFICATION,type,(void *)hst,ack_author,ack_data,0,NULL);
 #endif
+
+	/* create the contact notification list for this host */
+	create_notification_list_from_host(hst);
 
 	/* there are contacts to be notified... */
 	if(notification_list!=NULL){
@@ -978,7 +919,7 @@ int host_notification(host *hst, int type, char *ack_author, char *ack_data){
 			grab_summary_macros(temp_notification->contact);
 
 			/* notify this contact */
-			result=notify_contact_of_host(temp_notification->contact,hst,type,ack_author,ack_data,escalated);
+			result=notify_contact_of_host(temp_notification->contact,hst,type);
 
 			/* keep track of how many contacts were notified */
 			if(result==OK)
@@ -1033,12 +974,9 @@ int host_notification(host *hst, int type, char *ack_author, char *ack_data){
 #endif
 	        }
 
-	/* get the time we finished */
-	gettimeofday(&end_time,NULL);
-
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	broker_notification_data(NEBTYPE_NOTIFICATION_END,NEBFLAG_NONE,NEBATTR_NONE,HOST_NOTIFICATION,type,start_time,end_time,(void *)hst,ack_author,ack_data,escalated,contacts_notified,NULL);
+	broker_notification_data(NEBTYPE_NOTIFICATION_END,NEBFLAG_NONE,NEBATTR_NONE,HOST_NOTIFICATION,type,(void *)hst,ack_author,ack_data,contacts_notified,NULL);
 #endif
 
 	/* update the status log with the host info */
@@ -1323,7 +1261,7 @@ int check_contact_host_notification_viability(contact *cntct, host *hst, int typ
 
 
 /* notify a specific contact that an entire host is down or up */
-int notify_contact_of_host(contact *cntct, host *hst, int type, char *ack_author, char *ack_data, int escalated){
+int notify_contact_of_host(contact *cntct,host *hst, int type){
 	commandsmember *temp_commandsmember;
 	char command_name[MAX_INPUT_BUFFER];
 	char *command_name_ptr;
@@ -1332,10 +1270,6 @@ int notify_contact_of_host(contact *cntct, host *hst, int type, char *ack_author
 	char processed_command[MAX_COMMAND_BUFFER];
 	int early_timeout=FALSE;
 	double exectime;
-	struct timeval start_time;
-	struct timeval end_time;
-	struct timeval method_start_time;
-	struct timeval method_end_time;
 	int macro_options=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
 
 #ifdef DEBUG0
@@ -1350,28 +1284,8 @@ int notify_contact_of_host(contact *cntct, host *hst, int type, char *ack_author
 	if(check_contact_host_notification_viability(cntct,hst,type)==ERROR)
 		return ERROR;
 
-	/* get start time */
-	gettimeofday(&start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_contact_notification_data(NEBTYPE_CONTACTNOTIFICATION_START,NEBFLAG_NONE,NEBATTR_NONE,HOST_NOTIFICATION,type,start_time,end_time,(void *)hst,cntct,ack_author,ack_data,escalated,NULL);
-#endif
-
 	/* process all the notification commands this user has */
 	for(temp_commandsmember=cntct->host_notification_commands;temp_commandsmember!=NULL;temp_commandsmember=temp_commandsmember->next){
-
-		/* get start time */
-		gettimeofday(&method_start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		method_end_time.tv_sec=0L;
-		method_end_time.tv_usec=0L;
-		broker_contact_notification_method_data(NEBTYPE_CONTACTNOTIFICATIONMETHOD_START,NEBFLAG_NONE,NEBATTR_NONE,HOST_NOTIFICATION,type,method_start_time,method_end_time,(void *)hst,cntct,temp_commandsmember->command,ack_author,ack_data,escalated,NULL);
-#endif
 
 		/* get the command name */
 		strncpy(command_name,temp_commandsmember->command,sizeof(command_name));
@@ -1424,23 +1338,8 @@ int notify_contact_of_host(contact *cntct, host *hst, int type, char *ack_author
 				write_to_logs_and_console(temp_buffer,NSLOG_HOST_NOTIFICATION | NSLOG_RUNTIME_WARNING,TRUE);
 			        }
 		        }
-
-		/* get end time */
-		gettimeofday(&method_end_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_contact_notification_method_data(NEBTYPE_CONTACTNOTIFICATIONMETHOD_END,NEBFLAG_NONE,NEBATTR_NONE,HOST_NOTIFICATION,type,method_start_time,method_end_time,(void *)hst,cntct,temp_commandsmember->command,ack_author,ack_data,escalated,NULL);
-#endif
 	        }
 
-	/* get end time */
-	gettimeofday(&end_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_contact_notification_data(NEBTYPE_CONTACTNOTIFICATION_END,NEBFLAG_NONE,NEBATTR_NONE,HOST_NOTIFICATION,type,start_time,end_time,(void *)hst,cntct,ack_author,ack_data,escalated,NULL);
-#endif
 
 #ifdef DEBUG0
 	printf("notify_contact_of_host() end\n");
@@ -1528,7 +1427,7 @@ int should_host_notification_be_escalated(host *hst){
 
 
 /* given a host, create a list of contacts to be notified, removing duplicates */
-int create_notification_list_from_host(host *hst, int *escalated){
+int create_notification_list_from_host(host *hst){
 	hostescalation *temp_he;
 	contactgroupsmember *temp_group;
 	contactgroup *temp_contactgroup;
@@ -1540,9 +1439,6 @@ int create_notification_list_from_host(host *hst, int *escalated){
 
 	/* see if this notification should be escalated */
 	if(should_host_notification_be_escalated(hst)==TRUE){
-
-		/* set the escalation flag */
-		*escalated=TRUE;
 
 		/* check all the host escalation entries */
 		for(temp_he=hostescalation_list;temp_he!=NULL;temp_he=temp_he->next){
@@ -1570,9 +1466,6 @@ int create_notification_list_from_host(host *hst, int *escalated){
 
 	/* else we shouldn't escalate the notification, so continue as normal... */
 	else{
-
-		/* set the escalation flag */
-		*escalated=FALSE;
 
 		/* get all contacts for this host */
 		for(temp_contact=contact_list;temp_contact!=NULL;temp_contact=temp_contact->next){
