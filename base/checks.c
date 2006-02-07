@@ -2,14 +2,15 @@
  *
  * CHECKS.C - Service and host check functions for Nagios
  *
- * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   12-16-2005
+ * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   12-08-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -112,10 +113,7 @@ void run_service_check(service *svc){
 #ifdef EMBEDDEDPERL
 	char fname[512];
 	char *args[5] = {"",DO_CLEAN, "", "", NULL };
-	char *perl_plugin_output ;
 	int isperl;
-	SV *plugin_hndlr_cr;
-	STRLEN n_a ;
 #ifdef aTHX
 	dTHX;
 #endif
@@ -135,17 +133,6 @@ void run_service_check(service *svc){
 
 		/* reschedule the service check */
 		preferred_time=current_time+(svc->check_interval*interval_length);
-                }
-
-	/* if the service check should not be checked on a regular interval... */
-	if(svc->check_interval==0){
-
-		/* don't check the service if we're not forcing it through */
-		if(!(svc->check_options & CHECK_OPTION_FORCE_EXECUTION))
-			check_service=FALSE;
-
-		/* don't reschedule the service check */
-		svc->should_be_scheduled=FALSE;
                 }
 
 	/* make sure this is a valid time to check the service */
@@ -187,27 +174,23 @@ void run_service_check(service *svc){
 	/* if we shouldn't check the service, just reschedule it and leave... */
 	if(check_service==FALSE){
 
-		/* only attempt to (re)schedule checks that should get checked... */
-		if(svc->should_be_scheduled==TRUE){
+		/* make sure we rescheduled the next service check at a valid time */
+		get_next_valid_time(preferred_time,&next_valid_time,svc->check_period);
 
-			/* make sure we rescheduled the next service check at a valid time */
-			get_next_valid_time(preferred_time,&next_valid_time,svc->check_period);
+		/* the service could not be rescheduled properly - set the next check time for next year, but don't actually reschedule it */
+		if(time_is_valid==FALSE && next_valid_time==preferred_time){
 
-			/* the service could not be rescheduled properly - set the next check time for next year, but don't actually reschedule it */
-			if(time_is_valid==FALSE && next_valid_time==preferred_time){
-
-				svc->next_check=(time_t)(next_valid_time+(60*60*24*365));
-				svc->should_be_scheduled=FALSE;
+			svc->next_check=(time_t)(next_valid_time+(60*60*24*365));
+			svc->should_be_scheduled=FALSE;
 #ifdef DEBUG1
-				printf("Warning: Could not find any valid times to reschedule a check of service '%s' on host '%s'!\n",svc->description,svc->host_name);
+			printf("Warning: Could not find any valid times to reschedule a check of service '%s' on host '%s'!\n",svc->description,svc->host_name);
 #endif
-		                }
+		        }
 
-			/* this service could be rescheduled... */
-			else{
-				svc->next_check=next_valid_time;
-				svc->should_be_scheduled=TRUE;
-			        }
+		/* this service could be rescheduled... */
+		else{
+			svc->next_check=next_valid_time;
+			svc->should_be_scheduled=TRUE;
 		        }
 
 		/* update the status log with the current service */
@@ -266,9 +249,7 @@ void run_service_check(service *svc){
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_service_check(NEBTYPE_SERVICECHECK_INITIATE,NEBFLAG_NONE,NEBATTR_NONE,svc,SERVICE_CHECK_ACTIVE,start_time,end_time,svc->service_check_command,svc->latency,0.0,0,FALSE,0,processed_command,NULL);
+	broker_service_check(NEBTYPE_SERVICECHECK_INITIATE,NEBFLAG_NONE,NEBATTR_NONE,svc,SERVICE_CHECK_ACTIVE,start_time,start_time,svc->latency,0.0,0,FALSE,0,processed_command,NULL);
 #endif
 
 #ifdef EMBEDDEDPERL
@@ -290,6 +271,7 @@ void run_service_check(service *svc){
 
 		isperl = TRUE;
 		args[0] = fname;
+		/* args[2] no longer required because Perl plugin output is returned from perl_call_pv("Embed::Persistent::run_package" ..) */
 		args[2] = "";
 
 		if(strchr(processed_command,' ')==NULL)
@@ -297,76 +279,11 @@ void run_service_check(service *svc){
 		else
 			args[3]=processed_command+strlen(fname)+1;
 
-		ENTER; 
-		SAVETMPS;
-		PUSHMARK(SP);
-		XPUSHs(sv_2mortal(newSVpv(args[0],0)));
-		XPUSHs(sv_2mortal(newSVpv(args[1],0)));
-		XPUSHs(sv_2mortal(newSVpv(args[2],0)));
-		XPUSHs(sv_2mortal(newSVpv(args[3],0)));
-		PUTBACK;
-
 		/* call our perl interpreter to compile and optionally cache the command */
-
-		call_pv("Embed::Persistent::eval_file", G_SCALAR | G_EVAL);
-
-		SPAGAIN ;
-
-		if ( SvTRUE(ERRSV) ) {
-
-			/*
-			 * if SvTRUE(ERRSV)
-			 * 	write failure to IPC pipe
-			 *	return
-			 */
-
-			/* remove the top element of the Perl stack (undef) */
-			(void) POPs ;
-
-			pclose_result=STATE_UNKNOWN;
-			perl_plugin_output=SvPVX(ERRSV);
-			strip(perl_plugin_output);
-
-#ifdef DEBUG1
-			printf("embedded perl failed to compile %s, compile error %s - skipping plugin\n",fname,perl_plugin_output);
+		if(use_embedded_perl==TRUE)
+			perl_call_argv("Embed::Persistent::eval_file", G_DISCARD | G_EVAL, args);
+	        }
 #endif
-
-			/* get the check finish time */
-			gettimeofday(&end_time,NULL);
-
-			/* record check result info */
-			strncpy(svc_msg.output,perl_plugin_output,sizeof(svc_msg.output)-1);
-			svc_msg.output[sizeof(svc_msg.output)-1]='\x0';
-			svc_msg.return_code=pclose_result;
-			svc_msg.exited_ok=TRUE;
-			svc_msg.check_type=SERVICE_CHECK_ACTIVE;
-			svc_msg.finish_time=end_time;
-			svc_msg.early_timeout=FALSE;
-
-			/* write check results to message queue */
-			write_svc_message(&svc_msg);
-
-			return ;
-
-			}
-		else{
-
-			plugin_hndlr_cr=newSVsv(POPs);
-
-#ifdef DEBUG1
-			printf("embedded perl successfully compiled %s and returned code ref to plugin handler\n",fname);
-#endif
-
-			PUTBACK ;
-			FREETMPS ;
-			LEAVE ;
-
-
-			}
-		}
-#endif
-
-	/* plugin is a C plugin or a Perl plugin _without_ compilation errors */
 
 	/* fork a child process */
 	pid=fork();
@@ -413,38 +330,45 @@ void run_service_check(service *svc){
 #ifdef EMBEDDEDPERL
 			if(isperl){
 
+				SV *plugin_out_sv ;
+				char *perl_plugin_output ;
 				int count ;
 
-				/* execute our previously compiled script - from call_pv("Embed::Persistent::eval_file",..) */
-				/* NB. args[2] is _now_ a code ref (to the Perl subroutine corresp to the plugin) returned by eval_file() */
-
+				/* execute our previously compiled script - from perl_call_argv("Embed::Persistent::eval_file",..) */
 				ENTER; 
 				SAVETMPS;
 				PUSHMARK(SP);
-
 				XPUSHs(sv_2mortal(newSVpv(args[0],0)));
 				XPUSHs(sv_2mortal(newSVpv(args[1],0)));
-				XPUSHs(plugin_hndlr_cr);
+				XPUSHs(sv_2mortal(newSVpv(args[2],0)));
 				XPUSHs(sv_2mortal(newSVpv(args[3],0)));
-
 				PUTBACK;
-
-				count=call_pv("Embed::Persistent::run_package", G_ARRAY);
-
+				count = perl_call_pv("Embed::Persistent::run_package", G_EVAL | G_ARRAY);
 				SPAGAIN;
-
-				perl_plugin_output=POPpx;
-				strip(perl_plugin_output);
+				plugin_out_sv = POPs;
+				perl_plugin_output = SvPOK(plugin_out_sv) && (SvCUR(plugin_out_sv) > 0) ? savepv(SvPVX(plugin_out_sv))
+													: savepv("(No output!)\n") ;
 				strncpy(plugin_output, perl_plugin_output, sizeof(plugin_output));
-				perl_plugin_output[sizeof(perl_plugin_output)-1]='\x0';
-				pclose_result=POPi;
-
+				/* The Perl scalar corresponding to pclose_result could contain string or integer.
+				   It is better to let POPi do the dirty work (SvPVOK or SvIOK could be true).
+				 */
+				pclose_result = POPi ;
 				PUTBACK;
 				FREETMPS;
 				LEAVE;
 
+				/* check return status  */
+				if(SvTRUE(ERRSV)){
+					pclose_result=-2;
 #ifdef DEBUG1
-				printf("embedded perl ran %s, plugin output was %d, %s\n",fname, pclose_result, plugin_output);
+					printf("embedded perl ran %s with error %s\n",fname,SvPV(ERRSV,PL_na));
+#endif
+			                }
+
+				strip(plugin_output);
+
+#ifdef DEBUG1
+				printf("embedded perl plugin output was %d,%s\n",pclose_result, plugin_output);
 #endif
 
 				/* reset the alarm */
@@ -461,6 +385,16 @@ void run_service_check(service *svc){
 				svc_msg.check_type=SERVICE_CHECK_ACTIVE;
 				svc_msg.finish_time=end_time;
 				svc_msg.early_timeout=FALSE;
+
+				/* test for execution error */
+				if(pclose_result==-2){
+					pclose_result=STATE_UNKNOWN;
+					strncpy(svc_msg.output,"(Error returned by call to perl script)",sizeof(svc_msg.output)-1);
+					svc_msg.output[sizeof(svc_msg.output)-1]='\x0';
+					svc_msg.return_code=STATE_CRITICAL;
+					svc_msg.exited_ok=FALSE;
+					svc_msg.early_timeout=FALSE;
+			 	        }
 
 				/* write check results to message queue */
 				write_svc_message(&svc_msg);
@@ -1194,11 +1128,7 @@ void reap_service_checks(void){
 				/* reset the current check counter, so we give the service a chance */
 				/* this helps prevent the case where service has N max check attempts, N-1 of which have already occurred. */
 				/* if we didn't do this, the next check might fail and result in a hard problem - we should really give it more time */
-				/* ADDED IF STATEMENT 01-17-05 EG */
-				/* 01-17-05: Services in hard problem states before hosts went down would sometimes come back as soft problem states after */
-				/* the hosts recovered.  This caused problems, so hopefully this will fix it */
-				if(temp_service->state_type==SOFT_STATE)
-					temp_service->current_attempt=1;
+				temp_service->current_attempt=1;
 
 #ifdef REMOVED_041403
 				/* don't send a recovery notification if the service recovers at the next check */
@@ -1374,7 +1304,7 @@ void reap_service_checks(void){
 
 #ifdef USE_EVENT_BROKER
 		/* send data to event broker */
-		broker_service_check(NEBTYPE_SERVICECHECK_PROCESSED,NEBFLAG_NONE,NEBATTR_NONE,temp_service,temp_service->check_type,queued_svc_msg.start_time,queued_svc_msg.finish_time,NULL,temp_service->latency,temp_service->execution_time,service_check_timeout,queued_svc_msg.early_timeout,queued_svc_msg.return_code,NULL,NULL);
+		broker_service_check(NEBTYPE_SERVICECHECK_PROCESSED,NEBFLAG_NONE,NEBATTR_NONE,temp_service,temp_service->check_type,queued_svc_msg.start_time,queued_svc_msg.finish_time,temp_service->latency,temp_service->execution_time,service_check_timeout,queued_svc_msg.early_timeout,queued_svc_msg.return_code,NULL,NULL);
 #endif
 
 		/* set the checked flag */
@@ -1688,12 +1618,6 @@ void check_service_result_freshness(void){
 	printf("check_service_result_freshness() start\n");
 #endif
 
-
-#ifdef TEST_FRESHNESS
-	printf("\n======FRESHNESS START======\n");
-	printf("CHECKFRESHNESS 1\n");
-#endif
-
 	/* bail out if we're not supposed to be checking freshness */
 	if(check_service_freshness==FALSE)
 		return;
@@ -1701,17 +1625,8 @@ void check_service_result_freshness(void){
 	/* get the current time */
 	time(&current_time);
 
-#ifdef TEST_FRESHNESS
-	printf("CHECKFRESHNESS 2: %lu\n",(unsigned long)current_time);
-#endif
-
 	/* check all services... */
 	for(temp_service=service_list;temp_service!=NULL;temp_service=temp_service->next){
-
-#ifdef TEST_FRESHNESS
-		if(!strcmp(temp_service->description,"Freshness Check Test"))
-			printf("Checking: %s/%s\n",temp_service->host_name,temp_service->description);
-#endif
 
 		/* skip services we shouldn't be checking for freshness */
 		if(temp_service->check_freshness==FALSE)
@@ -1733,15 +1648,6 @@ void check_service_result_freshness(void){
 		if(check_time_against_period(current_time,temp_service->check_period)==ERROR)
 			continue;
 
-		/* EXCEPTION */
-		/* don't check freshness of services without regular check intervals if we're using auto-freshness threshold */
-		if(temp_service->check_interval==0 && temp_service->freshness_threshold==0)
-			continue;
-
-#ifdef TEST_FRESHNESS
-		printf("CHECKFRESHNESS 3\n");
-#endif
-
 		/* use user-supplied freshness threshold or auto-calculate a freshness threshold to use? */
 		if(temp_service->freshness_threshold==0){
 			if(temp_service->state_type==HARD_STATE || temp_service->current_state==STATE_OK)
@@ -1752,24 +1658,14 @@ void check_service_result_freshness(void){
 		else
 			freshness_threshold=temp_service->freshness_threshold;
 
-#ifdef TEST_FRESHNESS
-		printf("THRESHOLD: SVC=%d, USE=%d\n",temp_service->freshness_threshold,freshness_threshold);
-#endif
-
 		/* calculate expiration time */
-		/* CHANGED 11/10/05 EG - program start is only used in expiration time calculation if > last check AND active checks are enabled, so active checks can become stale immediately upon program startup */
-		if(temp_service->has_been_checked==FALSE || (temp_service->checks_enabled==TRUE && program_start>temp_service->last_check))
+#ifdef REMOVED_032604
+		if(temp_service->has_been_checked==FALSE)
+#endif
+		if(temp_service->has_been_checked==FALSE || program_start>temp_service->last_check)
 			expiration_time=(time_t)(program_start+freshness_threshold);
 		else
 			expiration_time=(time_t)(temp_service->last_check+freshness_threshold);
-
-#ifdef TEST_FRESHNESS
-		printf("HASBEENCHECKED: %d\n",temp_service->has_been_checked);
-		printf("PROGRAM START:  %lu\n",(unsigned long)program_start);
-		printf("LAST CHECK:     %lu\n",(unsigned long)temp_service->last_check);
-		printf("CURRENT TIME:   %lu\n",(unsigned long)current_time);
-		printf("EXPIRE TIME:    %lu\n",(unsigned long)expiration_time);
-#endif
 
 		/* the results for the last check of this service are stale */
 		if(expiration_time<current_time){
@@ -1786,10 +1682,6 @@ void check_service_result_freshness(void){
 			schedule_service_check(temp_service,current_time,TRUE);
 		        }
 	        }
-
-#ifdef TEST_FRESHNESS
-	printf("\n======FRESHNESS END======\n");
-#endif
 
 #ifdef DEBUG0
 	printf("check_service_result_freshness() end\n");
@@ -1988,8 +1880,7 @@ void check_host_result_freshness(void){
 			freshness_threshold=temp_host->freshness_threshold;
 
 		/* calculate expiration time */
-		/* CHANGED 11/10/05 EG - program start is only used in expiration time calculation if > last check AND active checks are enabled, so active checks can become stale immediately upon program startup */
-		if(temp_host->has_been_checked==FALSE || (temp_host->checks_enabled==TRUE && (program_start>temp_host->last_check)))
+		if(temp_host->has_been_checked==FALSE)
 			expiration_time=(time_t)(program_start+freshness_threshold);
 		else
 			expiration_time=(time_t)(temp_host->last_check+freshness_threshold);
@@ -2032,7 +1923,6 @@ int check_host(host *hst, int propagation_options, int check_options){
 	int old_state=HOST_UP;
 	struct timeval start_time;
 	struct timeval end_time;
-	double execution_time=0.0;
 	char old_plugin_output[MAX_PLUGINOUTPUT_LENGTH]="";
 
 #ifdef DEBUG0
@@ -2044,9 +1934,7 @@ int check_host(host *hst, int propagation_options, int check_options){
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_host_check(NEBTYPE_HOSTCHECK_INITIATE,NEBFLAG_NONE,NEBATTR_NONE,hst,HOST_CHECK_ACTIVE,hst->current_state,hst->state_type,start_time,end_time,hst->host_check_command,hst->latency,0.0,0,FALSE,0,NULL,NULL,NULL,NULL);
+	broker_host_check(NEBTYPE_HOSTCHECK_INITIATE,NEBFLAG_NONE,NEBATTR_NONE,hst,HOST_CHECK_ACTIVE,hst->current_state,hst->state_type,start_time,start_time,hst->latency,0.0,0,FALSE,0,NULL,NULL,NULL,NULL);
 #endif
 
 	/* make sure we return the original host state unless it changes... */
@@ -2159,8 +2047,6 @@ int check_host(host *hst, int propagation_options, int check_options){
 			handle_host_state(hst);
 		        }
 
-		/* readjust the current check number - added 01/10/05 EG */
-		hst->current_attempt--;
 	        }
 
 
@@ -2316,8 +2202,7 @@ int check_host(host *hst, int propagation_options, int check_options){
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	execution_time=(double)((double)(end_time.tv_sec-start_time.tv_sec)+(double)((end_time.tv_usec-start_time.tv_usec)/1000)/1000.0);
-	broker_host_check(NEBTYPE_HOSTCHECK_PROCESSED,NEBFLAG_NONE,NEBATTR_NONE,hst,HOST_CHECK_ACTIVE,hst->current_state,hst->state_type,start_time,end_time,hst->host_check_command,hst->latency,execution_time,0,FALSE,0,NULL,hst->plugin_output,hst->perf_data,NULL);
+	broker_host_check(NEBTYPE_HOSTCHECK_PROCESSED,NEBFLAG_NONE,NEBATTR_NONE,hst,HOST_CHECK_ACTIVE,hst->current_state,hst->state_type,start_time,end_time,hst->latency,hst->execution_time,0,FALSE,0,NULL,hst->plugin_output,hst->perf_data,NULL);
 #endif
 
 	/* check to see if the associated host is flapping */
@@ -2416,13 +2301,6 @@ int run_host_check(host *hst, int check_options){
 	process_macros(raw_command,processed_command,sizeof(processed_command),0);
 	strip(processed_command);
 			
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	end_time_hires.tv_sec=0L;
-	end_time_hires.tv_usec=0L;
-	broker_host_check(NEBTYPE_HOSTCHECK_RAW_START,NEBFLAG_NONE,NEBATTR_NONE,hst,HOST_CHECK_ACTIVE,return_result,hst->state_type,start_time_hires,end_time_hires,hst->host_check_command,0.0,0.0,host_check_timeout,early_timeout,result,processed_command,hst->plugin_output,hst->perf_data,NULL);
-#endif
-
 #ifdef DEBUG3
 	printf("\t\tRaw Command: %s\n",raw_command);
 	printf("\t\tProcessed Command: %s\n",processed_command);
@@ -2510,7 +2388,7 @@ int run_host_check(host *hst, int check_options){
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	broker_host_check(NEBTYPE_HOSTCHECK_RAW_END,NEBFLAG_NONE,NEBATTR_NONE,hst,HOST_CHECK_ACTIVE,return_result,hst->state_type,start_time_hires,end_time_hires,hst->host_check_command,0.0,exectime,host_check_timeout,early_timeout,result,processed_command,hst->plugin_output,hst->perf_data,NULL);
+	broker_host_check(NEBTYPE_HOSTCHECK_RAW,NEBFLAG_NONE,NEBATTR_NONE,hst,HOST_CHECK_ACTIVE,return_result,hst->state_type,start_time_hires,end_time_hires,hst->latency,exectime,host_check_timeout,early_timeout,result,processed_command,hst->plugin_output,hst->perf_data,NULL);
 #endif
 
 #ifdef DEBUG3

@@ -2,14 +2,15 @@
  *
  * NEBMODULES.H - Include file for event broker modules
  *
- * Copyright (c) 2002-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   12-17-2005
+ * Copyright (c) 2002-2003 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   09-10-2003
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,14 +26,11 @@
 #ifndef _NEBMODULES_H
 #define _NEBMODULES_H
 
-#ifdef __cplusplus
-  extern "C" {
-#endif
 
 /***** MODULE VERSION INFORMATION *****/
 
 #define NEB_API_VERSION(x) int __neb_api_version = x;
-#define CURRENT_NEB_API_VERSION    2
+#define CURRENT_NEB_API_VERSION    1
 
 
 
@@ -95,8 +93,6 @@ typedef struct nebmodule_struct{
 /***** MODULE FUNCTIONS *****/
 int neb_set_module_info(void *,int,char *);
 
-#ifdef __cplusplus
-  }
-#endif
 
 #endif
+

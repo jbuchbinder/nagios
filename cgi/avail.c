@@ -2,14 +2,15 @@
  *
  * AVAIL.C -  Nagios Availability CGI
  *
- * Copyright (c) 2000-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 01-20-2006
+ * Copyright (c) 2000-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 12-02-2004
  *
  * License:
  * 
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -76,9 +77,6 @@ extern int       log_rotation_method;
 #define AS_HOST_DOWNTIME_START  12
 #define AS_HOST_DOWNTIME_END    13
 
-#define AS_SOFT_STATE           1
-#define AS_HARD_STATE           2
-
 
 /* display types */
 #define DISPLAY_NO_AVAIL        0
@@ -119,7 +117,6 @@ authdata current_authdata;
 typedef struct archived_state_struct{
 	time_t  time_stamp;
 	int     entry_type;
-	int     state_type;
 	char    *state_info;
 	int     processed_state;
 	struct archived_state_struct *misc_ptr;
@@ -205,7 +202,6 @@ int assume_state_retention=TRUE;
 int assume_states_during_notrunning=TRUE;
 int initial_assumed_host_state=AS_NO_DATA;
 int initial_assumed_service_state=AS_NO_DATA;
-int include_soft_states=FALSE;
 
 char *hostgroup_name="";
 char *host_name="";
@@ -237,8 +233,8 @@ void compute_report_times(void);
 
 int convert_host_state_to_archived_state(int);
 int convert_service_state_to_archived_state(int);
-void add_global_archived_state(int,int,time_t,char *);
-void add_archived_state(int,int,time_t,char *,avail_subject *);
+void add_global_archived_state(int,time_t,char *);
+void add_archived_state(int,time_t,char *,avail_subject *);
 void add_scheduled_downtime(int,time_t,avail_subject *);
 void free_availability_data(void);
 void free_archived_state_list(archived_state *);
@@ -410,12 +406,8 @@ int main(int argc, char **argv){
 			if(display_type==DISPLAY_HOST_AVAIL && show_all_hosts==FALSE){
 				host_report_url("all","View Availability Report For All Hosts");
 				printf("<BR>\n");
-#ifdef USE_TRENDS
-				printf("<a href='%s?host=%s&t1=%lu&t2=%lu&assumestateretention=%s&assumeinitialstates=%s&includesoftstates=%s&assumestatesduringnotrunning=%s&initialassumedhoststate=%d&backtrack=%d'>View Trends For This Host</a><BR>\n",TRENDS_CGI,url_encode(host_name),t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_host_state,backtrack_archives);
-#endif
-#ifdef USE_HISTOGRAM
+				printf("<a href='%s?host=%s&t1=%lu&t2=%lu&assumestateretention=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedhoststate=%d&backtrack=%d'>View Trends For This Host</a><BR>\n",TRENDS_CGI,url_encode(host_name),t1,t2,(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_host_state,backtrack_archives);
 				printf("<a href='%s?host=%s&t1=%lu&t2=%lu&assumestateretention=%s'>View Alert Histogram For This Host</a><BR>\n",HISTOGRAM_CGI,url_encode(host_name),t1,t2,(assume_state_retention==TRUE)?"yes":"no");
-#endif
 				printf("<a href='%s?host=%s'>View Status Detail For This Host</a><BR>\n",STATUS_CGI,url_encode(host_name));
 				printf("<a href='%s?host=%s'>View Alert History For This Host</a><BR>\n",HISTORY_CGI,url_encode(host_name));
 				printf("<a href='%s?host=%s'>View Notifications For This Host</a><BR>\n",NOTIFICATIONS_CGI,url_encode(host_name));
@@ -425,13 +417,9 @@ int main(int argc, char **argv){
 				printf("<BR>\n");
 				service_report_url("null","all","View Availability Report For All Services");
 				printf("<BR>\n");
-#ifdef USE_TRENDS
 				printf("<a href='%s?host=%s",TRENDS_CGI,url_encode(host_name));
-				printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s&includesoftstates=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedservicestate=%d&backtrack=%d'>View Trends For This Service</a><BR>\n",url_encode(svc_description),t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
-#endif
-#ifdef USE_HISTOGRAM
+				printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedservicestate=%d&backtrack=%d'>View Trends For This Service</a><BR>\n",url_encode(svc_description),t1,t2,(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
 				printf("<a href='%s?host=%s",HISTOGRAM_CGI,url_encode(host_name));
-#endif
 				printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s'>View Alert Histogram For This Service</a><BR>\n",url_encode(svc_description),t1,t2,(assume_state_retention==TRUE)?"yes":"no");
 				printf("<A HREF='%s?host=%s&",HISTORY_CGI,url_encode(host_name));
 				printf("service=%s'>View Alert History This Service</A><BR>\n",url_encode(svc_description));
@@ -520,7 +508,6 @@ int main(int argc, char **argv){
 			printf("<input type='hidden' name='assumeinitialstates' value='%s'>\n",(assume_initial_states==TRUE)?"yes":"no");
 			printf("<input type='hidden' name='assumestateretention' value='%s'>\n",(assume_state_retention==TRUE)?"yes":"no");
 			printf("<input type='hidden' name='assumestatesduringnotrunning' value='%s'>\n",(assume_states_during_notrunning==TRUE)?"yes":"no");
-			printf("<input type='hidden' name='includesoftstates' value='%s'>\n",(include_soft_states==TRUE)?"yes":"no");
 
 			printf("<tr><td valign=top align=left class='optBoxItem'>First assumed %s state:</td><td valign=top align=left class='optBoxItem'>%s</td></tr>\n",(display_type==DISPLAY_SERVICE_AVAIL)?"service":"host",(display_type==DISPLAY_HOST_AVAIL || display_type==DISPLAY_HOSTGROUP_AVAIL || display_type==DISPLAY_SERVICEGROUP_AVAIL)?"First assumed service state":"");
 			printf("<tr>\n");
@@ -762,14 +749,6 @@ int main(int argc, char **argv){
 		printf("<select name='assumestatesduringnotrunning'>\n");
 		printf("<option value=yes>Yes\n");
 		printf("<option value=no>No\n");
-		printf("</select>\n");
-		printf("</td></tr>\n");
-
-		printf("<tr><td class='reportSelectSubTitle' align=right>Include Soft States:</td>\n");
-		printf("<td class='reportSelectItem'>\n");
-		printf("<select name='includesoftstates'>\n");
-		printf("<option value=yes>Yes\n");
-		printf("<option value=no SELECTED>No\n");
 		printf("</select>\n");
 		printf("</td></tr>\n");
 
@@ -1302,20 +1281,6 @@ int process_cgivars(void){
 				assume_state_retention=FALSE;
 		        }
 
-		/* we found the include soft states option */
-		else if(!strcmp(variables[x],"includesoftstates")){
-			x++;
-			if(variables[x]==NULL){
-				error=TRUE;
-				break;
-			        }
-
-			if(!strcmp(variables[x],"yes"))
-				include_soft_states=TRUE;
-			else
-				include_soft_states=FALSE;
-		        }
-
 		/* we found the backtrack archives argument */
 		else if(!strcmp(variables[x],"backtrack")){
 			x++;
@@ -1725,7 +1690,7 @@ void compute_subject_availability(avail_subject *subject, time_t current_time){
 				if(subject->last_known_state!=AS_NO_DATA){
 
 				        /* add a dummy archived state item, so something can get graphed */
-					add_archived_state(subject->last_known_state,AS_HARD_STATE,t1,"Current Host State Assumed (Faked Log Entry)",subject);
+					add_archived_state(subject->last_known_state,t1,"Current Host State Assumed (Faked Log Entry)",subject);
 
 				        /* use the current state as the last known real state */
 					first_real_state=subject->last_known_state;
@@ -1749,7 +1714,7 @@ void compute_subject_availability(avail_subject *subject, time_t current_time){
 				if(subject->last_known_state!=AS_NO_DATA){
 
 				        /* add a dummy archived state item, so something can get graphed */
-					add_archived_state(subject->last_known_state,AS_HARD_STATE,t1,"Current Service State Assumed (Faked Log Entry)",subject);
+					add_archived_state(subject->last_known_state,t1,"Current Service State Assumed (Faked Log Entry)",subject);
 
 				        /* use the current state as the last known real state */
 					first_real_state=subject->last_known_state;
@@ -1835,9 +1800,9 @@ void compute_subject_availability(avail_subject *subject, time_t current_time){
 				initial_assumed_time=subject->as_list->time_stamp-1;
 			
 			if(subject->type==HOST_SUBJECT)
-				add_archived_state(initial_assumed_state,AS_HARD_STATE,initial_assumed_time,"First Host State Assumed (Faked Log Entry)",subject);
+				add_archived_state(initial_assumed_state,initial_assumed_time,"First Host State Assumed (Faked Log Entry)",subject);
 			else
-				add_archived_state(initial_assumed_state,AS_HARD_STATE,initial_assumed_time,"First Service State Assumed (Faked Log Entry)",subject);
+				add_archived_state(initial_assumed_state,initial_assumed_time,"First Service State Assumed (Faked Log Entry)",subject);
 		        }
 	        }
 
@@ -2673,11 +2638,11 @@ avail_subject *find_subject(int type, char *hn, char *sd){
 
 
 /* adds an archived state entry to all subjects */
-void add_global_archived_state(int entry_type, int state_type, time_t time_stamp, char *state_info){
+void add_global_archived_state(int state_type, time_t time_stamp, char *state_info){
 	avail_subject *temp_subject;
 
 	for(temp_subject=subject_list;temp_subject!=NULL;temp_subject=temp_subject->next)
-		add_archived_state(entry_type,state_type,time_stamp,state_info,temp_subject);
+		add_archived_state(state_type,time_stamp,state_info,temp_subject);
 
 	return;
         }
@@ -2686,7 +2651,7 @@ void add_global_archived_state(int entry_type, int state_type, time_t time_stamp
 
 
 /* adds an archived state entry to a specific subject */
-void add_archived_state(int entry_type, int state_type, time_t time_stamp, char *state_info, avail_subject *subject){
+void add_archived_state(int state_type, time_t time_stamp, char *state_info, avail_subject *subject){
 	archived_state *last_as=NULL;
 	archived_state *temp_as=NULL;
 	archived_state *new_as=NULL;
@@ -2705,13 +2670,12 @@ void add_archived_state(int entry_type, int state_type, time_t time_stamp, char 
 	else new_as->state_info=NULL;
 
 	/* initialize the "processed state" value - this gets modified later for most entries */
-	if(entry_type!=AS_PROGRAM_START && entry_type!=AS_PROGRAM_END && entry_type!=AS_NO_DATA)
-		new_as->processed_state=entry_type;
+	if(state_type!=AS_PROGRAM_START && state_type!=AS_PROGRAM_END && state_type!=AS_NO_DATA)
+		new_as->processed_state=state_type;
 	else
 		new_as->processed_state=AS_NO_DATA;
 
-	new_as->entry_type=entry_type;
-	new_as->state_type=state_type;
+	new_as->entry_type=state_type;
 	new_as->time_stamp=time_stamp;
 	new_as->misc_ptr=NULL;
 
@@ -2881,7 +2845,6 @@ void scan_log_file_for_archived_state_data(char *filename){
 	time_t time_stamp;
 	mmapfile *thefile;
 	avail_subject *temp_subject;
-	int state_type;
 
 	if((thefile=mmap_fopen(filename))==NULL)
 		return;
@@ -2908,15 +2871,15 @@ void scan_log_file_for_archived_state_data(char *filename){
 
 		/* program starts/restarts */
 		if(strstr(input," starting..."))
-			add_global_archived_state(AS_PROGRAM_START,AS_NO_DATA,time_stamp,"Program start");
+			add_global_archived_state(AS_PROGRAM_START,time_stamp,"Program start");
 		if(strstr(input," restarting..."))
-			add_global_archived_state(AS_PROGRAM_START,AS_NO_DATA,time_stamp,"Program restart");
+			add_global_archived_state(AS_PROGRAM_START,time_stamp,"Program restart");
 
 		/* program stops */
 		if(strstr(input," shutting down..."))
-			add_global_archived_state(AS_PROGRAM_END,AS_NO_DATA,time_stamp,"Normal program termination");
+			add_global_archived_state(AS_PROGRAM_END,time_stamp,"Normal program termination");
 		if(strstr(input,"Bailing out"))
-			add_global_archived_state(AS_PROGRAM_END,AS_NO_DATA,time_stamp,"Abnormal program termination");
+			add_global_archived_state(AS_PROGRAM_END,time_stamp,"Abnormal program termination");
 
 		if(display_type==DISPLAY_HOST_AVAIL || display_type==DISPLAY_HOSTGROUP_AVAIL || display_type==DISPLAY_SERVICEGROUP_AVAIL){
 
@@ -2934,15 +2897,10 @@ void scan_log_file_for_archived_state_data(char *filename){
 				if(temp_subject==NULL)
 					continue;
 
-				/* state types */
-				if(strstr(input,";SOFT;")){
-					if(include_soft_states==FALSE)
-						continue;
-					state_type=AS_SOFT_STATE;
-				        }
-				if(strstr(input,";HARD;"))
-					state_type=AS_HARD_STATE;
-
+				/* skip soft states */
+				if(strstr(input,";SOFT;"))
+					continue;
+				
 				/* get the plugin output */
 				temp_buffer=my_strtok(NULL,";");
 				temp_buffer=my_strtok(NULL,";");
@@ -2950,13 +2908,13 @@ void scan_log_file_for_archived_state_data(char *filename){
 				plugin_output=my_strtok(NULL,"\n");
 
 				if(strstr(input,";DOWN;"))
-					add_archived_state(AS_HOST_DOWN,state_type,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_HOST_DOWN,time_stamp,plugin_output,temp_subject);
 				else if(strstr(input,";UNREACHABLE;"))
-					add_archived_state(AS_HOST_UNREACHABLE,state_type,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_HOST_UNREACHABLE,time_stamp,plugin_output,temp_subject);
 				else if(strstr(input,";RECOVERY") || strstr(input,";UP;"))
-					add_archived_state(AS_HOST_UP,state_type,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_HOST_UP,time_stamp,plugin_output,temp_subject);
 				else
-					add_archived_state(AS_NO_DATA,AS_NO_DATA,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_NO_DATA,time_stamp,plugin_output,temp_subject);
 			        }
 
 			/* scheduled downtime notices */
@@ -3005,14 +2963,9 @@ void scan_log_file_for_archived_state_data(char *filename){
 				if(temp_subject==NULL)
 					continue;
 
-				/* state types */
-				if(strstr(input,";SOFT;")){
-					if(include_soft_states==FALSE)
-						continue;
-					state_type=AS_SOFT_STATE;
-				        }
-				if(strstr(input,";HARD;"))
-					state_type=AS_HARD_STATE;
+				/* skip soft states */
+				if(strstr(input,";SOFT;"))
+					continue;
 
 				/* get the plugin output */
 				temp_buffer=my_strtok(NULL,";");
@@ -3021,15 +2974,15 @@ void scan_log_file_for_archived_state_data(char *filename){
 				plugin_output=my_strtok(NULL,"\n");
 
 				if(strstr(input,";CRITICAL;"))
-					add_archived_state(AS_SVC_CRITICAL,state_type,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_SVC_CRITICAL,time_stamp,plugin_output,temp_subject);
 				else if(strstr(input,";WARNING;"))
-					add_archived_state(AS_SVC_WARNING,state_type,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_SVC_WARNING,time_stamp,plugin_output,temp_subject);
 				else if(strstr(input,";UNKNOWN;"))
-					add_archived_state(AS_SVC_UNKNOWN,state_type,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_SVC_UNKNOWN,time_stamp,plugin_output,temp_subject);
 				else if(strstr(input,";RECOVERY;") || strstr(input,";OK;"))
-					add_archived_state(AS_SVC_OK,state_type,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_SVC_OK,time_stamp,plugin_output,temp_subject);
 				else
-					add_archived_state(AS_NO_DATA,AS_NO_DATA,time_stamp,plugin_output,temp_subject);
+					add_archived_state(AS_NO_DATA,time_stamp,plugin_output,temp_subject);
 
 			        }
 
@@ -3232,7 +3185,6 @@ void write_log_entries(avail_subject *subject){
 	char *bgclass="";
 	char *ebgclass="";
 	char *entry_type="";
-	char *state_type="";
 	int days;
 	int hours;
 	int minutes;
@@ -3266,7 +3218,7 @@ void write_log_entries(avail_subject *subject){
 			entry_type="?";
 			break;
 		        }
-		add_archived_state(temp_sd->entry_type,AS_NO_DATA,temp_sd->time_stamp,entry_type,subject);
+		add_archived_state(temp_sd->entry_type,temp_sd->time_stamp,entry_type,subject);
 	        }
 
 
@@ -3300,13 +3252,6 @@ void write_log_entries(avail_subject *subject){
 
 	/* write all archived state entries */
 	for(temp_as=subject->as_list;temp_as!=NULL;temp_as=temp_as->next){
-
-		if(temp_as->state_type==AS_HARD_STATE)
-			state_type=" (HARD)";
-		else if(temp_as->state_type==AS_SOFT_STATE)
-			state_type=" (SOFT)";
-		else
-			state_type="";
 
 		switch(temp_as->entry_type){
 		case AS_NO_DATA:
@@ -3403,7 +3348,7 @@ void write_log_entries(avail_subject *subject){
 		printf("<td class='logEntries%s'>%s</td>",bgclass,start_date_time);
 		printf("<td class='logEntries%s'>%s</td>",bgclass,end_date_time);
 		printf("<td class='logEntries%s'>%s</td>",bgclass,duration);
-		printf("<td class='logEntries%s'>%s%s</td>",ebgclass,entry_type,state_type);
+		printf("<td class='logEntries%s'>%s</td>",ebgclass,entry_type);
 		printf("<td class='logEntries%s'>%s</td>",bgclass,(temp_as->state_info==NULL)?"":temp_as->state_info);
 		printf("</tr>\n");
 	        }
@@ -4002,15 +3947,14 @@ void display_host_availability(void){
 
 		printf("<DIV ALIGN=CENTER CLASS='dataTitle'>Host State Breakdowns:</DIV>\n");
 
-#ifdef USE_TRENDS
 		printf("<p align='center'>\n");
 		printf("<a href='%s?host=%s",TRENDS_CGI,url_encode(host_name));
-		printf("&t1=%lu&t2=%lu&includesoftstates=%s&assumestateretention=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedhoststate=%d&backtrack=%d'>",t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_host_state,backtrack_archives);
+		printf("&t1=%lu&t2=%lu&assumestateretention=%s&assumeinitialstates=%s&initialassumedhoststate=%d&backtrack=%d'>",t1,t2,(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",initial_assumed_host_state,backtrack_archives);
 		printf("<img src='%s?createimage&smallimage&host=%s",TRENDS_CGI,url_encode(host_name));
-		printf("&t1=%lu&t2=%lu&includesoftstates=%s&assumestateretention=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedhoststate=%d&backtrack=%d' border=1 alt='Host State Trends' title='Host State Trends' width='500' height='20'>",t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_host_state,backtrack_archives);
+		printf("&t1=%lu&t2=%lu&assumestateretention=%s&assumeinitialstates=%s&initialassumedhoststate=%d&backtrack=%d' border=1 alt='Host State Trends' title='Host State Trends' width='500' height='20'>",t1,t2,(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",initial_assumed_host_state,backtrack_archives);
 		printf("</a><br>\n");
 		printf("</p>\n");
-#endif
+
 		printf("<DIV ALIGN=CENTER>\n");
 		printf("<TABLE BORDER=0 CLASS='data'>\n");
 		printf("<TR><TH CLASS='data'>State</TH><TH CLASS='data'>Type / Reason</TH><TH CLASS='data'>Time</TH><TH CLASS='data'>%% Total Time</TH><TH CLASS='data'>%% Known Time</TH></TR>\n");
@@ -4023,7 +3967,7 @@ void display_host_availability(void){
 
 		/* down times */
 		printf("<tr CLASS='dataOdd'><td CLASS='hostDOWN' rowspan=3>DOWN</td>");
-		printf("<td CLASS='dataOdd'>Unscheduled</td><td CLASS='dataOdd'>%s</td><td CLASS='dataOdd'>%2.3f%%</td><td class='dataOdd'>%2.3f%%</td></tr>\n",time_down_unscheduled_string,percent_time_down_unscheduled,percent_time_down_known);
+		printf("<td CLASS='dataOdd'>Unscheduled</td><td CLASS='dataOdd'>%s</td><td CLASS='dataOdd'>%2.3f%%</td><td class='dataOdd'>%2.3f%%</td></tr>\n",time_down_unscheduled_string,percent_time_down,percent_time_down_known);
 		printf("<tr CLASS='dataOdd'><td CLASS='dataOdd'>Scheduled</td><td CLASS='dataOdd'>%s</td><td CLASS='dataOdd'>%2.3f%%</td><td class='dataOdd'>%2.3f%%</td></tr>\n",time_down_scheduled_string,percent_time_down_scheduled,percent_time_down_scheduled_known);
 		printf("<tr CLASS='hostDOWN'><td CLASS='hostDOWN'>Total</td><td CLASS='hostDOWN'>%s</td><td CLASS='hostDOWN'>%2.3f%%</td><td class='hostDOWN'>%2.3f%%</td></tr>\n",time_down_string,percent_time_down,percent_time_down_known);
 
@@ -4494,15 +4438,14 @@ void display_service_availability(void){
 	                }
 
 		printf("<DIV ALIGN=CENTER CLASS='dataTitle'>Service State Breakdowns:</DIV>\n");
-#ifdef USE_TRENDS
+
 		printf("<p align='center'>\n");
 		printf("<a href='%s?host=%s",TRENDS_CGI,url_encode(host_name));
-		printf("&service=%s&t1=%lu&t2=%lu&includesoftstates=%s&assumestateretention=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedservicestate=%d&backtrack=%d'>",url_encode(svc_description),t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
+		printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s&assumeinitialstates=%s&initialassumedservicestate=%d&backtrack=%d'>",url_encode(svc_description),t1,t2,(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
 		printf("<img src='%s?createimage&smallimage&host=%s",TRENDS_CGI,url_encode(host_name));
-		printf("&service=%s&t1=%lu&t2=%lu&includesoftstates=%s&assumestateretention=%s&assumeinitialstates=%s&assumestatesduringnotrunning=%s&initialassumedservicestate=%d&backtrack=%d' border=1 alt='Service State Trends' title='Service State Trends' width='500' height='20'>",url_encode(svc_description),t1,t2,(include_soft_states==TRUE)?"yes":"no",(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",(assume_states_during_notrunning==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
+		printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s&assumeinitialstates=%s&initialassumedservicestate=%d&backtrack=%d' border=1 alt='Service State Trends' title='Service State Trends' width='500' height='20'>",url_encode(svc_description),t1,t2,(assume_state_retention==TRUE)?"yes":"no",(assume_initial_states==TRUE)?"yes":"no",initial_assumed_service_state,backtrack_archives);
 		printf("</a><br>\n");
 		printf("</p>\n");
-#endif
 
 		printf("<DIV ALIGN=CENTER>\n");
 		printf("<TABLE BORDER=0 CLASS='data'>\n");

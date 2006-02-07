@@ -3,17 +3,18 @@
  * NAGIOSTATS.C - Displays Nagios Statistics
  *
  * Program: Nagiostats
- * Version: 2.0
+ * Version: 2.0b1
  * License: GPL
- * Copyright (c) 2003-2005 Ethan Galstad (nagios@nagios.org)
+ * Copyright (c) 2003-2004 Ethan Galstad (nagios@nagios.org)
  *
- * Last Modified:   02-07-2006
+ * Last Modified:   12-15-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -213,7 +214,7 @@ int main(int argc, char **argv){
 
 	if(mrtg_mode==FALSE){
 		printf("\nNagios Stats %s\n",PROGRAM_VERSION);
-		printf("Copyright (c) 2003-2005 Ethan Galstad (www.nagios.org)\n");
+		printf("Copyright (c) 2003-2004 Ethan Galstad (nagios@nagios.org)\n");
 		printf("Last Modified: %s\n",PROGRAM_MODIFICATION_DATE);
 		printf("License: GPL\n\n");
 	        }
@@ -222,8 +223,9 @@ int main(int argc, char **argv){
 	if(display_license==TRUE){
 
 		printf("This program is free software; you can redistribute it and/or modify\n");
-		printf("it under the terms of the GNU General Public License version 2 as\n");
-		printf("published by the Free Software Foundation.\n\n");
+		printf("it under the terms of the GNU General Public License as published by\n");
+		printf("the Free Software Foundation; either version 2 of the License, or\n");
+		printf("(at your option) any later version.\n\n");
 		printf("This program is distributed in the hope that it will be useful,\n");
 		printf("but WITHOUT ANY WARRANTY; without even the implied warranty of\n");
 		printf("MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n");
@@ -262,18 +264,10 @@ int main(int argc, char **argv){
 		printf(" NUMSVCUNKN         number of services UNKNOWN.\n");
 		printf(" NUMSVCCRIT         number of services CRITICAL.\n");
 		printf(" NUMSVCPROB         number of service problems (WARNING, UNKNOWN or CRITIAL).\n");
-		printf(" NUMSVCCHECKED      number of services that have been checked since start.\n");
-		printf(" NUMSVCSCHEDULED    number of services that are currently scheduled to be checked.\n");
-		printf(" NUMSVCFLAPPING     number of services that are currently flapping.\n");
-		printf(" NUMSVCDOWNTIME     number of services that are currently in downtime.\n");
 		printf(" NUMHSTUP           number of hosts UP.\n");
 		printf(" NUMHSTDOWN         number of hosts DOWN.\n");
 		printf(" NUMHSTUNR          number of hosts UNREACHABLE.\n");
 		printf(" NUMHSTPROB         number of host problems (DOWN or UNREACHABLE).\n");
-		printf(" NUMHSTCHECKED      number of hosts that have been checked since start.\n");
-		printf(" NUMHSTSCHEDULED    number of hosts that are currently scheduled to be checked.\n");
-		printf(" NUMHSTFLAPPING     number of hosts that are currently flapping.\n");
-		printf(" NUMHSTDOWNTIME     number of hosts that are currently in downtime.\n");
 		printf(" xxxACTSVCLAT       MIN/MAX/AVG active service check latency (ms).\n");
 		printf(" xxxACTSVCEXT       MIN/MAX/AVG active service check execution time (ms).\n");
 		printf(" xxxACTSVCPSC       MIN/MAX/AVG active service check %% state change.\n");
@@ -465,16 +459,6 @@ int display_mrtg_values(void){
 		else if(!strcmp(temp_ptr,"NUMSVCPROB"))
 			printf("%d\n",services_warning+services_unknown+services_critical);
 
-		/* misc service info */
-		else if(!strcmp(temp_ptr,"NUMSVCCHECKED"))
-			printf("%d\n",services_checked);
-		else if(!strcmp(temp_ptr,"NUMSVCSCHEDULED"))
-			printf("%d\n",services_scheduled);
-		else if(!strcmp(temp_ptr,"NUMSVCFLAPPING"))
-			printf("%d\n",services_flapping);
-		else if(!strcmp(temp_ptr,"NUMSVCDOWNTIME"))
-			printf("%d\n",services_in_downtime);
-
 		/* host states */
 		else if(!strcmp(temp_ptr,"NUMHSTUP"))
 			printf("%d\n",hosts_up);
@@ -484,16 +468,6 @@ int display_mrtg_values(void){
 			printf("%d\n",hosts_unreachable);
 		else if(!strcmp(temp_ptr,"NUMHSTPROB"))
 			printf("%d\n",hosts_down+hosts_unreachable);
-
-		/* misc host info */
-		else if(!strcmp(temp_ptr,"NUMHSTCHECKED"))
-			printf("%d\n",hosts_checked);
-		else if(!strcmp(temp_ptr,"NUMHSTSCHEDULED"))
-			printf("%d\n",hosts_scheduled);
-		else if(!strcmp(temp_ptr,"NUMHSTFLAPPING"))
-			printf("%d\n",hosts_flapping);
-		else if(!strcmp(temp_ptr,"NUMHSTDOWNTIME"))
-			printf("%d\n",hosts_in_downtime);
 
 		else
 			printf("%s\n",temp_ptr);
@@ -517,12 +491,12 @@ int display_stats(void){
 	printf("----------------------------------------------------\n");
 	printf("Status File:                          %s\n",status_file);
 	time_difference=(current_time-status_creation_date);
-	get_time_breakdown(time_difference,&days,&hours,&minutes,&seconds);
+	get_time_breakdown(time_difference,&days,&minutes,&hours,&seconds);
 	printf("Status File Age:                      %dd %dh %dm %ds\n",days,hours,minutes,seconds);
 	printf("Status File Version:                  %s\n",status_version);
 	printf("\n");
 	time_difference=(current_time-program_start);
-	get_time_breakdown(time_difference,&days,&hours,&minutes,&seconds);
+	get_time_breakdown(time_difference,&days,&minutes,&hours,&seconds);
 	printf("Program Running Time:                 %dd %dh %dm %ds\n",days,hours,minutes,seconds);
 	printf("\n");
 	printf("Total Services:                       %d\n",status_service_entries);

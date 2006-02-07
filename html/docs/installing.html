@@ -58,7 +58,7 @@ tar xzf nagios-<i>version</i>.tar.gz
 <p>
 When you have finished executing these commands, you should find a <b>nagios-<i>version</i></b> directory
 that has been created in your current directory.  Inside that directory you will find all the files
-that comprise the core Nagios distribution.
+that compromise the core Nagios distribution.
 </p>
 
 
@@ -137,7 +137,7 @@ Next, add the users that your web server and Nagios run as to the newly created 
 </p>
 
 <p>
-<font color="red">/usr/sbin/usermod -G nagcmd apache</font><br>
+<font color="red">/usr/sbin/usermod -G nagcmd apache</font>
 <font color="red">/usr/sbin/usermod -G nagcmd nagios</font><br>
 </p> 
 
@@ -152,7 +152,7 @@ Run the configure script to initialize variables and create a Makefile as follow
 <p>
 <strong>
 <font color="red">
-./configure --prefix=<i>prefix</i> --with-cgiurl=<i>cgiurl</i> --with-htmurl=<i>htmurl</i> --with-nagios-user=<i>someuser</i> --with-nagios-group=<i>somegroup</i> --with-command-group=<i>cmdgroup</i>
+./configure --prefix=<i>prefix</i> --with-cgiurl=<i>cgiurl</i> --with-htmurl=<i>htmurl</i> --with-nagios-user=<i>someuser</i> --with-nagios-grp=<i>somegroup</i> --with-command-grp=<i>cmdgroup</i>
 </font>
 </strong>
 </p>

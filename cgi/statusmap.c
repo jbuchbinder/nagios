@@ -2,8 +2,8 @@
  *
  * STATUSMAP.C - Nagios Network Status Map CGI
  *
- * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 08-12-2005
+ * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 11-05-2004
  *
  * Description:
  *
@@ -13,8 +13,9 @@
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -292,6 +293,7 @@ int main(int argc, char **argv){
 
 	/* free all allocated memory */
 	free_memory();
+	free_extended_data();
 	free_layer_list();
 
 	return OK;
@@ -768,7 +770,7 @@ void display_page_header(void){
 		printf("</td></tr>\n");
 
 		printf("<tr><td CLASS='optBoxItem'>\n");
-		printf("Suppress popups:<br>\n");
+		printf("Supress popups:<br>\n");
 		printf("<input type='checkbox' name='nopopups' %s>\n",(display_popups==FALSE)?"CHECKED":"");
 		printf("</td><td CLASS='optBoxItem'>\n");
 		printf("<input type='submit' value='Update'>\n");
@@ -2019,7 +2021,7 @@ void write_host_popup_text(host *hst){
 		printf("Pending");
 
 	printf("</b></td></tr>");
-	printf("<tr><td class=\\\"popupText\\\">Status Information:</td><td class=\\\"popupText\\\"><b>%s</b></td></tr>",(temp_status->plugin_output==NULL)?"":temp_status->plugin_output);
+	printf("<tr><td class=\\\"popupText\\\">Status Information:</td><td class=\\\"popupText\\\"><b>%s</b></td></tr>",temp_status->plugin_output);
 
 	current_time=time(NULL);
 	if(temp_status->last_state_change==(time_t)0)

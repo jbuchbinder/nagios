@@ -2,14 +2,15 @@
  *
  * UTILS.C - Miscellaneous utility functions for Nagios
  *
- * Copyright (c) 1999-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   01-02-2006
+ * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   12-08-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +33,17 @@
 #include "../include/nebmods.h"
 #include "../include/nebmodules.h"
 
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
+
+#ifdef HAVE_PWD_H
+#include <pwd.h>
+#endif
+ 
+#ifdef HAVE_GRP_H
+#include <grp.h>
+#endif
 
 #ifdef EMBEDDEDPERL
 #include "../include/epn_nagios.h"
@@ -78,7 +90,6 @@ extern int      sigshutdown;
 extern int      sigrestart;
 
 extern int      daemon_mode;
-extern int      daemon_dumps_core;
 
 extern int	use_syslog;
 extern int      log_notifications;
@@ -136,7 +147,6 @@ extern unsigned long modified_service_process_attributes;
 extern int      log_rotation_method;
 
 extern time_t   last_command_check;
-extern time_t	last_command_status_update;
 extern time_t   last_log_rotation;
 
 extern int      verify_config;
@@ -164,7 +174,7 @@ extern int      status_update_interval;
 
 extern int      time_change_threshold;
 
-extern unsigned long event_broker_options;
+extern int      event_broker_options;
 
 extern int      process_performance_data;
 
@@ -210,10 +220,7 @@ extern circular_buffer external_command_buffer;
 extern circular_buffer service_result_buffer;
 extern circular_buffer event_broker_buffer;
 
-/* from GNU defines errno as a macro, since it's a per-thread variable */
-#ifndef errno
 extern int errno;
-#endif
 
 
 
@@ -231,7 +238,6 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 	int address_index=0;
 	char *selected_macro=NULL;
 	int clean_macro=FALSE;
-	int found_macro_x=FALSE;
 
 #ifdef DEBUG0
 	printf("process_macros() start\n");
@@ -251,7 +257,6 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 #ifdef TEST_MACROS
 	printf("**** BEGIN MACRO PROCESSING ***********\n");
 	printf("Processing: '%s'\n",input_buffer);
-	printf("Buffer length: %d\n",buffer_length);
 #endif
 
 	for(temp_buffer=my_strtok(input_buffer,"$");temp_buffer!=NULL;temp_buffer=my_strtok(NULL,"$")){
@@ -261,7 +266,6 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 #endif
 
 		selected_macro=NULL;
-		found_macro_x=FALSE;
 		clean_macro=FALSE;
 
 		if(in_macro==FALSE){
@@ -270,7 +274,7 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 				output_buffer[buffer_length-1]='\x0';
 			        }
 #ifdef TEST_MACROS
-			printf("    Not currently in macro.  Running output (%d): '%s'\n",strlen(output_buffer),output_buffer);
+			printf("    Not currently in macro.  Running output: '%s'\n",output_buffer);
 #endif
 			in_macro=TRUE;
 			}
@@ -283,48 +287,25 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 					if(macro_x_names[x]==NULL)
 						continue;
 					if(!strcmp(temp_buffer,macro_x_names[x])){
-
 						selected_macro=macro_x[x];
-						found_macro_x=TRUE;
-						
-						/* host/service output/perfdata macros get cleaned */
-						if(x>=16 && x<=19){
-							clean_macro=TRUE;
-							options&=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
-						        }
-
 						break;
 						}
 				        }
 
 				/* we already have a macro... */
-				if(found_macro_x==TRUE)
+				if(selected_macro!=NULL)
 					x=0;
 
 				/* on-demand host macros */
 				else if(strstr(temp_buffer,"HOST") && strstr(temp_buffer,":")){
-
 					grab_on_demand_macro(temp_buffer);
 					selected_macro=macro_ondemand;
-
-					/* output/perfdata macros get cleaned */
-					if(strstr(temp_buffer,"HOSTOUTPUT:")==temp_buffer || strstr(temp_buffer,"HOSTPERFDATA:")){
-						clean_macro=TRUE;
-						options&=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
-					        }
 				        }
 
 				/* on-demand service macros */
 				else if(strstr(temp_buffer,"SERVICE") && strstr(temp_buffer,":")){
-
 					grab_on_demand_macro(temp_buffer);
 					selected_macro=macro_ondemand;
-
-					/* output/perfdata macros get cleaned */
-					if(strstr(temp_buffer,"SERVICEOUTPUT:")==temp_buffer || strstr(temp_buffer,"SERVICEPERFDATA:")){
-						clean_macro=TRUE;
-						options&=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
-					        }
 				        }
 
 				/* argv macros */
@@ -357,7 +338,7 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 				/* an escaped $ is done by specifying two $$ next to each other */
 				else if(!strcmp(temp_buffer,"")){
 #ifdef TEST_MACROS
-					printf("    Escaped $.  Running output (%d): '%s'\n",strlen(output_buffer),output_buffer);
+					printf("    Escaped $.  Running output: '%s'\n",output_buffer);
 #endif
 					strncat(output_buffer,"$",buffer_length-strlen(output_buffer)-1);
 				        }
@@ -365,7 +346,7 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 				/* a non-macro, just some user-defined string between two $s */
 				else{
 #ifdef TEST_MACROS
-					printf("    Non-macro.  Running output (%d): '%s'\n",strlen(output_buffer),output_buffer);
+					printf("    Non-macro.  Running output: '%s'\n",output_buffer);
 #endif
 					strncat(output_buffer,"$",buffer_length-strlen(output_buffer)-1);
 					output_buffer[buffer_length-1]='\x0';
@@ -382,7 +363,7 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 						selected_macro=get_url_encoded_string(selected_macro);
 				
 					/* some macros are cleaned... */
-					if(clean_macro==TRUE || ((options & STRIP_ILLEGAL_MACRO_CHARS) || (options & ESCAPE_MACRO_CHARS)))
+					if(clean_macro==TRUE)
 						strncat(output_buffer,(selected_macro==NULL)?"":clean_macro_chars(selected_macro,options),buffer_length-strlen(output_buffer)-1);
 
 					/* others are not cleaned */
@@ -393,7 +374,7 @@ int process_macros(char *input_buffer, char *output_buffer, int buffer_length, i
 					if(options & URL_ENCODE_MACRO_CHARS)
 						free(selected_macro);
 #ifdef TEST_MACROS
-					printf("    Just finished macro.  Running output (%d): '%s'\n",strlen(output_buffer),output_buffer);
+					printf("    Just finished macro.  Running output: '%s'\n",output_buffer);
 #endif
 				        }
 
@@ -461,13 +442,6 @@ int grab_service_macros(service *svc){
 		macro_x[MACRO_SERVICECHECKCOMMAND]=NULL;
 	else
 		macro_x[MACRO_SERVICECHECKCOMMAND]=strdup(svc->service_check_command);
-
-	/* grab the service check type */
-	if(macro_x[MACRO_SERVICECHECKTYPE]!=NULL)
-		free(macro_x[MACRO_SERVICECHECKTYPE]);
-	macro_x[MACRO_SERVICECHECKTYPE]=(char *)malloc(MAX_CHECKTYPE_LENGTH);
-	if(macro_x[MACRO_SERVICECHECKTYPE]!=NULL)
-		strcpy(macro_x[MACRO_SERVICECHECKTYPE],(svc->check_type==SERVICE_CHECK_PASSIVE)?"PASSIVE":"ACTIVE");
 
 	/* grab the service state type macro (this is usually overridden later on) */
 	if(macro_x[MACRO_SERVICESTATETYPE]!=NULL)
@@ -755,13 +729,6 @@ int grab_host_macros(host *hst){
 		macro_x[MACRO_HOSTSTATEID][MAX_STATEID_LENGTH-1]='\x0';
 	        }
 
-	/* grab the host check type */
-	if(macro_x[MACRO_HOSTCHECKTYPE]!=NULL)
-		free(macro_x[MACRO_HOSTCHECKTYPE]);
-	macro_x[MACRO_HOSTCHECKTYPE]=(char *)malloc(MAX_CHECKTYPE_LENGTH);
-	if(macro_x[MACRO_HOSTCHECKTYPE]!=NULL)
-		strcpy(macro_x[MACRO_HOSTCHECKTYPE],(hst->check_type==HOST_CHECK_PASSIVE)?"PASSIVE":"ACTIVE");
-
 	/* get the host state type macro */
 	if(macro_x[MACRO_HOSTSTATETYPE]!=NULL)
 		free(macro_x[MACRO_HOSTSTATETYPE]);
@@ -871,7 +838,7 @@ int grab_host_macros(host *hst){
 		free(macro_x[MACRO_LASTHOSTCHECK]);
 	macro_x[MACRO_LASTHOSTCHECK]=(char *)malloc(MAX_DATETIME_LENGTH);
 	if(macro_x[MACRO_LASTHOSTCHECK]!=NULL){
-		snprintf(macro_x[MACRO_LASTHOSTCHECK],MAX_DATETIME_LENGTH,"%lu",(unsigned long)hst->last_check);
+		snprintf(macro_x[MACRO_LASTHOSTCHECK],MAX_DATETIME_LENGTH,"%lu",(unsigned long)hst->last_state_change);
 		macro_x[MACRO_LASTHOSTCHECK][MAX_DATETIME_LENGTH-1]='\x0';
 	        }
 
@@ -1243,13 +1210,6 @@ int grab_on_demand_host_macro(host *hst, char *macro){
 		        }
 	        }
 
-	/* grab the host check type */
-	else if(!strcmp(macro,"HOSTCHECKTYPE")){
-		macro_ondemand=(char *)malloc(MAX_CHECKTYPE_LENGTH);
-		if(macro_ondemand!=NULL)
-			strcpy(macro_ondemand,(hst->check_type==HOST_CHECK_PASSIVE)?"PASSIVE":"ACTIVE");
-		}
-
 	/* get the host state type macro */
 	else if(!strcmp(macro,"HOSTSTATETYPE")){
 		macro_ondemand=(char *)malloc(MAX_STATETYPE_LENGTH);
@@ -1351,7 +1311,7 @@ int grab_on_demand_host_macro(host *hst, char *macro){
 	else if(!strcmp(macro,"LASTHOSTCHECK")){
 		macro_ondemand=(char *)malloc(MAX_DATETIME_LENGTH);
 		if(macro_ondemand!=NULL){
-			snprintf(macro_ondemand,MAX_DATETIME_LENGTH,"%lu",(unsigned long)hst->last_check);
+			snprintf(macro_ondemand,MAX_DATETIME_LENGTH,"%lu",(unsigned long)hst->last_state_change);
 			macro_ondemand[MAX_DATETIME_LENGTH-1]='\x0';
 		        }
 	        }
@@ -1507,13 +1467,6 @@ int grab_on_demand_service_macro(service *svc, char *macro){
 			strip(macro_ondemand);
 		        }
 	        }
-
-	/* grab the servuce check type */
-	else if(!strcmp(macro,"SERVICECHECKTYPE")){
-		macro_ondemand=(char *)malloc(MAX_CHECKTYPE_LENGTH);
-		if(macro_ondemand!=NULL)
-			strcpy(macro_ondemand,(svc->check_type==SERVICE_CHECK_PASSIVE)?"PASSIVE":"ACTIVE");
-		}
 
 	/* grab the service state type macro (this is usually overridden later on) */
 	else if(!strcmp(macro,"SERVICESTATETYPE")){
@@ -2191,7 +2144,6 @@ int clear_volatile_macros(void){
 		case MACRO_COMMANDFILE:
 		case MACRO_HOSTPERFDATAFILE:
 		case MACRO_SERVICEPERFDATAFILE:
-		case MACRO_PROCESSSTARTTIME:
 			break;
 		default:
 			if(macro_x[x]!=NULL){
@@ -2258,7 +2210,6 @@ int clear_nonvolatile_macros(void){
 		case MACRO_COMMANDFILE:
 		case MACRO_HOSTPERFDATAFILE:
 		case MACRO_SERVICEPERFDATAFILE:
-		case MACRO_PROCESSSTARTTIME:
 			if(macro_x[x]!=NULL){
 				free(macro_x[x]);
 				macro_x[x]=NULL;
@@ -2386,9 +2337,6 @@ int init_macrox_names(void){
 	add_macrox_name(MACRO_TOTALSERVICESUNKNOWNUNHANDLED,"TOTALSERVICESUNKNOWNUNHANDLED");
 	add_macrox_name(MACRO_TOTALSERVICEPROBLEMS,"TOTALSERVICEPROBLEMS");
 	add_macrox_name(MACRO_TOTALSERVICEPROBLEMSUNHANDLED,"TOTALSERVICEPROBLEMSUNHANDLED");
-	add_macrox_name(MACRO_PROCESSSTARTTIME,"PROCESSSTARTTIME");
-	add_macrox_name(MACRO_HOSTCHECKTYPE,"HOSTCHECKTYPE");
-	add_macrox_name(MACRO_SERVICECHECKTYPE,"SERVICECHECKTYPE");
 
 #ifdef DEBUG0
 	printf("init_macrox_names() end\n");
@@ -2399,10 +2347,10 @@ int init_macrox_names(void){
 
 
 /* saves the name of a macro */
-int add_macrox_name(int i, char *name){
+int add_macrox_name(int index, char *name){
 
 	/* dup the macro name */
-	macro_x_names[i]=strdup(name);
+	macro_x_names[index]=strdup(name);
 
 	return OK;
         }
@@ -2457,16 +2405,8 @@ int set_macrox_environment_vars(int set){
 #endif
 
 	/* set each of the macrox environment variables */
-	for(x=0;x<MACRO_X_COUNT;x++){
-
-		/* host/service output/perfdata macros get cleaned */
-		if(x>=16 && x<=19)
-			set_macro_environment_var(macro_x_names[x],clean_macro_chars(macro_x[x],STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS),set);
-
-		/* others don't */
-		else
-			set_macro_environment_var(macro_x_names[x],macro_x[x],set);
-	        }
+	for(x=0;x<MACRO_X_COUNT;x++)
+		set_macro_environment_var(macro_x_names[x],macro_x[x],set);
 
 #ifdef DEBUG0
 	printf("set_macrox_environment_vars() end\n");
@@ -2505,9 +2445,6 @@ int set_argv_macro_environment_vars(int set){
 /* sets or unsets a macro environment variable */
 int set_macro_environment_var(char *name, char *value, int set){
 	char *env_macro_name=NULL;
-#ifndef HAVE_SETENV
-	char *env_macro_string=NULL;
-#endif
 
 #ifdef DEBUG0
 	printf("set_macro_environment_var() start\n");
@@ -2524,27 +2461,13 @@ int set_macro_environment_var(char *name, char *value, int set){
 	/* create the name */
 	strcpy(env_macro_name,"");
 	strcpy(env_macro_name,MACRO_ENV_VAR_PREFIX);
-	strcat(env_macro_name,name);
+	strcat(env_macro_name,(name==NULL)?"":name);
 
 	/* set or unset the environment variable */
-	if(set==TRUE){
-#ifdef HAVE_SETENV
+	if(set==TRUE)
 		setenv(env_macro_name,(value==NULL)?"":value,1);
-#else
-		/* needed for Solaris and systems that don't have setenv() */
-		/* this will leak memory, but in a "controlled" way, since lost memory should be freed when the child process exits */
-		env_macro_string=(char *)malloc(strlen(env_macro_name)+strlen((value==NULL)?"":value)+2);
-		if(env_macro_string!=NULL){
-			sprintf(env_macro_string,"%s=%s",env_macro_name,(value==NULL)?"":value);
-			putenv(env_macro_string);
-		        }
-#endif
-	        }
-	else{
-#ifdef HAVE_UNSETENV
+	else
 		unsetenv(env_macro_name);
-#endif
-	        }
 
 	/* free allocated memory */
 	free(env_macro_name);
@@ -2568,7 +2491,7 @@ int set_macro_environment_var(char *name, char *value, int set){
 int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *output,int output_length){
         pid_t pid;
 	int status;
-	int result=0;
+	int result;
 	char buffer[MAX_INPUT_BUFFER];
 	char temp_buffer[MAX_INPUT_BUFFER];
 	int fd[2];
@@ -2576,11 +2499,9 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 	int bytes_read=0;
 	struct timeval start_time,end_time;
 #ifdef EMBEDDEDPERL
-	char fname[512];
+	char fname[1024];
 	char *args[5] = {"",DO_CLEAN, "", "", NULL };
 	int isperl;
-	SV *plugin_hndlr_cr;
-	STRLEN n_a ;
 #ifdef aTHX
 	dTHX;
 #endif
@@ -2596,7 +2517,6 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 	if(output!=NULL)
 		strcpy(output,"");
 	*early_timeout=FALSE;
-	*exectime=0.0;
 
 	/* if no command was passed, return with no error */
 	if(cmd==NULL)
@@ -2630,52 +2550,9 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 			args[3]=cmd+strlen(fname)+1;
 
 		/* call our perl interpreter to compile and optionally cache the compiled script. */
-
-		ENTER;
-		SAVETMPS;
-		PUSHMARK(SP); 
-
-		XPUSHs(sv_2mortal(newSVpv(args[0],0)));
-		XPUSHs(sv_2mortal(newSVpv(args[1],0)));
-		XPUSHs(sv_2mortal(newSVpv(args[2],0)));
-		XPUSHs(sv_2mortal(newSVpv(args[3],0)));
-
-		PUTBACK;
-
-		call_pv("Embed::Persistent::eval_file", G_EVAL);
-
-		SPAGAIN;
-
-		if ( SvTRUE(ERRSV) ) {
-							/*
-							 * XXXX need pipe open to send the compilation failure message back to Nag ?
-							 */
-			POPs ;
-
-			snprintf(buffer,sizeof(buffer)-1,"%s", SvPVX(ERRSV));
-			buffer[sizeof(buffer)-1]='\x0';
-			strip(buffer);
-
-#ifdef DEBUG1
-			printf("embedded perl failed to  compile %s, compile error %s\n",fname,buffer);
-#endif
-			write_to_logs_and_console(buffer,NSLOG_RUNTIME_WARNING,TRUE);
-
-			return STATE_UNKNOWN;
-
-			}
-		else{
-			plugin_hndlr_cr=newSVsv(POPs);
-#ifdef DEBUG1
-			printf("embedded perl successfully compiled  %s and returned plugin handler (Perl subroutine code ref)\n",fname);
-#endif
-
-			PUTBACK ;
-			FREETMPS ;
-			LEAVE ;
-
-			}
-		}
+		if(use_embedded_perl==TRUE)
+			perl_call_argv("Embed::Persistent::eval_file", G_DISCARD | G_EVAL, args);
+	        }
 #endif 
 
 	/* create a pipe */
@@ -2687,13 +2564,6 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 
 	/* get the command start time */
 	gettimeofday(&start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_system_command(NEBTYPE_SYSTEM_COMMAND_START,NEBFLAG_NONE,NEBATTR_NONE,start_time,end_time,*exectime,timeout,*early_timeout,result,cmd,NULL,NULL);
-#endif
 
 	/* fork */
 	pid=fork();
@@ -2748,39 +2618,50 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 #ifdef EMBEDDEDPERL
 		if(isperl){
 
+			SV *perl_out_sv ;
 			char *perl_output ;
 			int count ;
 
-			/* execute our previously compiled script - by call_pv("Embed::Persistent::eval_file",..) */
+			/* execute our previously compiled script - from perl_call_argv("Embed::Persistent::eval_file",..) */
 			ENTER;
 			SAVETMPS;
 			PUSHMARK(SP);
-
 			XPUSHs(sv_2mortal(newSVpv(args[0],0)));
 			XPUSHs(sv_2mortal(newSVpv(args[1],0)));
-			XPUSHs(plugin_hndlr_cr);
+			XPUSHs(sv_2mortal(newSVpv(args[2],0)));
 			XPUSHs(sv_2mortal(newSVpv(args[3],0)));
-
 			PUTBACK;
-
-			count=call_pv("Embed::Persistent::run_package", G_ARRAY);
+			count = perl_call_pv("Embed::Persistent::run_package", G_EVAL | G_ARRAY);
 			/* count is a debug hook. It should always be two (2), because the persistence framework tries to return two (2) args */
-
 			SPAGAIN;
-
-			perl_output=POPpx ;
-			strip(perl_output);
+			perl_out_sv = POPs;
+			perl_output = SvPOK(perl_out_sv) && (SvCUR(perl_out_sv) > 0) ? savepv(SvPVX(perl_out_sv))
+										     : savepv("(No output!)\n") ;
 			strncpy(buffer, perl_output, sizeof(buffer));
 			buffer[sizeof(buffer)-1]='\x0';
-			status=POPi ;
+			/* The Perl scalar corresponding to pclose_result could contain string or integer.
+			   It is better to let POPi do the dirty work (SvPVOK or SvIOK could be true).
+			*/
+			status = POPi ;
 
 			PUTBACK;
 			FREETMPS;
 			LEAVE;                                    
 
+			/* check return status  */
+			if(SvTRUE(ERRSV)){
 #ifdef DEBUG0
-			printf("embedded perl ran command %s with output %d, %s\n",fname, status, buffer);
+				printf("embedded perl ran command %s with error\n",fname);
 #endif
+				status=-2;
+			        }
+			strip(buffer);
+
+			/* report the command status */
+			if(status==-2)
+				result=STATE_CRITICAL;
+			else
+				result=status;
 
 			/* write the output back to the parent process */
 			write(fd[1],buffer,strlen(buffer)+1);
@@ -2791,7 +2672,7 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 			/* reset the alarm */
 			alarm(0);
 
-			_exit(status);
+			_exit(result);
 		        }
 
 		/* Not a perl command. Use popen... */
@@ -2914,7 +2795,7 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 
 #ifdef USE_EVENT_BROKER
 		/* send data to event broker */
-		broker_system_command(NEBTYPE_SYSTEM_COMMAND_END,NEBFLAG_NONE,NEBATTR_NONE,start_time,end_time,*exectime,timeout,*early_timeout,result,cmd,output,NULL);
+		broker_system_command(NEBTYPE_SYSTEM_COMMAND,NEBFLAG_NONE,NEBATTR_NONE,*exectime,timeout,*early_timeout,result,cmd,output,NULL);
 #endif
 
 		/* close the pipe for reading */
@@ -2932,8 +2813,8 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 
 /* given a "raw" command, return the "expanded" or "whole" command line */
 void get_raw_command_line(char *cmd, char *raw_command, int buffer_length, int macro_options){
-	char temp_arg[MAX_COMMAND_BUFFER];
-	char arg_buffer[MAX_COMMAND_BUFFER];
+	char temp_arg[MAX_INPUT_BUFFER];
+	char arg_buffer[MAX_INPUT_BUFFER];
 	command *temp_command;
 	int x,y;
 	int arg_index;
@@ -3193,12 +3074,7 @@ void get_datetime_string(time_t *raw_time,char *buffer,int buffer_length, int ty
 	int year;
 	char *weekdays[7]={"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
 	char *months[12]={"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sept","Oct","Nov","Dec"};
-
-#ifdef HAVE_TM_ZONE
-# define tzone tm_ptr->tm_zone
-#else
-# define tzone (tm_ptr->tm_isdst)?tzname[1]:tzname[0]
-#endif
+	char *tzone="";
 
 	if(raw_time==NULL)
 		time(&t);
@@ -3213,6 +3089,12 @@ void get_datetime_string(time_t *raw_time,char *buffer,int buffer_length, int ty
 	month=tm_ptr->tm_mon+1;
 	day=tm_ptr->tm_mday;
 	year=tm_ptr->tm_year+1900;
+
+#ifdef HAVE_TM_ZONE
+	tzone=(char *)tm_ptr->tm_zone;
+#else
+	tzone=(tm_ptr->tm_isdst)?tzname[1]:tzname[0];
+#endif
 
 	/* ctime() style date/time */
 	if(type==LONG_DATE_TIME)
@@ -3243,9 +3125,6 @@ void get_datetime_string(time_t *raw_time,char *buffer,int buffer_length, int ty
 		snprintf(buffer,buffer_length,"%02d:%02d:%02d",hour,minute,second);
 
 	buffer[buffer_length-1]='\x0';
-
-	/* don't mess up other functions that might want to call a variable 'tzone' */
-#undef tzone
 
 	return;
         }
@@ -3332,14 +3211,10 @@ void setup_sighandler(void){
 	setbuf(stderr,(char *)NULL);
 
 	/* initialize signal handling */
-	signal(SIGPIPE,SIG_IGN);
 	signal(SIGQUIT,sighandler);
 	signal(SIGTERM,sighandler);
 	signal(SIGHUP,sighandler);
-#if !defined(DEBUG0) && !defined(DEBUG1) && !defined(DEBUG2) && !defined(DEBUG3) && !defined(DEBUG4) && !defined(DEBUG5)
-	if(daemon_dumps_core==FALSE || daemon_mode==FALSE)
-		signal(SIGSEGV,sighandler);
-#endif
+	signal(SIGSEGV,sighandler);
 
 #ifdef DEBUG0
 	printf("setup_sighandler() end\n");
@@ -3361,7 +3236,6 @@ void reset_sighandler(void){
 	signal(SIGTERM,SIG_DFL);
 	signal(SIGHUP,SIG_DFL);
 	signal(SIGSEGV,SIG_DFL);
-	signal(SIGPIPE,SIG_DFL);
 
 #ifdef DEBUG0
 	printf("reset_sighandler() end\n");
@@ -3480,18 +3354,12 @@ int daemon_init(void){
 	char buf[256];
 	struct flock lock;
 	char temp_buffer[MAX_INPUT_BUFFER];
-	char *homedir=NULL;
 
 #ifdef RLIMIT_CORE
 	struct rlimit limit;
 #endif
 
-	/* change working directory. scuttle home if we're dumping core */
-	homedir=getenv("HOME");
-	if(daemon_dumps_core==TRUE && homedir!=NULL)
-		chdir(homedir);
-	else
-		chdir("/");
+	chdir("/");		/* change working directory */
 
 	umask(S_IWGRP|S_IWOTH);
 
@@ -3596,11 +3464,9 @@ int daemon_init(void){
 
 	/* prevent daemon from dumping a core file... */
 #ifdef RLIMIT_CORE
-	if(daemon_dumps_core==FALSE){
-		getrlimit(RLIMIT_CORE,&limit);
-		limit.rlim_cur=0;
-		setrlimit(RLIMIT_CORE,&limit);
-	        }
+	getrlimit(RLIMIT_CORE,&limit);
+	limit.rlim_cur=0;
+	setrlimit(RLIMIT_CORE,&limit);
 #endif
 
 	/* write PID to lockfile... */
@@ -3647,7 +3513,6 @@ int drop_privileges(char *user, char *group){
 	gid_t gid=-1;
 	struct group *grp;
 	struct passwd *pw;
-	int result=OK;
 
 #ifdef DEBUG0
 	printf("drop_privileges() start\n");
@@ -3656,10 +3521,6 @@ int drop_privileges(char *user, char *group){
 #ifdef DEBUG1
 	printf("Original UID/GID: %d/%d\n",(int)getuid(),(int)getgid());
 #endif
-
-	/* only drop privileges if we're running as root, so we don't interfere with being debugged while running as some random user */
-	if(getuid()!=0)
-		return OK;
 
 	/* set effective group ID */
 	if(group!=NULL){
@@ -3687,7 +3548,6 @@ int drop_privileges(char *user, char *group){
 				snprintf(temp_buffer,sizeof(temp_buffer)-1,"Warning: Could not set effective GID=%d",(int)gid);
 				temp_buffer[sizeof(temp_buffer)-1]='\x0';
 				write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_WARNING,TRUE);
-				result=ERROR;
 			        }
 		        }
 	        }
@@ -3736,7 +3596,6 @@ int drop_privileges(char *user, char *group){
 			snprintf(temp_buffer,sizeof(temp_buffer)-1,"Warning: Could not set effective UID=%d",(int)uid);
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_WARNING,TRUE);
-			result=ERROR;
 		        }
 	        }
 
@@ -3748,7 +3607,7 @@ int drop_privileges(char *user, char *group){
 	printf("drop_privileges() end\n");
 #endif
 
-	return result;
+	return OK;
         }
 
 
@@ -3773,7 +3632,7 @@ int read_svc_message(service_message *message){
 		return -1;
 
 	/* clear the message buffer */
-	memset((void *)message,0,sizeof(service_message));
+	bzero((void *)message,sizeof(service_message));
 
 	/* get a lock on the buffer */
 	pthread_mutex_lock(&service_result_buffer.buffer_lock);
@@ -4051,12 +3910,9 @@ int contains_illegal_object_chars(char *name){
 		if(ch<32 || ch==127)
 			return TRUE;
 
-		/* REMOVED 3/11/05 to allow for non-english spellings, etc. */
 		/* illegal extended ASCII characters */
-		/*
 		if(ch>=166)
 			return TRUE;
-		*/
 
 		/* illegal user-specified characters */
 		if(illegal_object_chars!=NULL)
@@ -4093,12 +3949,9 @@ char *clean_macro_chars(char *macro,int options){
 			if(ch<32 || ch==127)
 				continue;
 
-			/* REMOVED 3/11/05 to allow for non-english spellings, etc. */
 			/* illegal extended ASCII characters */
-			/*
 			if(ch>=166)
 				continue;
-			*/
 
 			/* illegal user-specified characters */
 			illegal_char=FALSE;
@@ -4149,10 +4002,10 @@ char *my_strtok(char *buffer,char *tokens){
 	if(sequence_head[0]=='\x0')
 		return NULL;
 	
-	token_position=strchr(my_strtok_buffer,tokens[0]);
+	token_position=index(my_strtok_buffer,tokens[0]);
 
 	if(token_position==NULL){
-		my_strtok_buffer=strchr(my_strtok_buffer,'\x0');
+		my_strtok_buffer=index(my_strtok_buffer,'\x0');
 		return sequence_head;
 	        }
 
@@ -4388,10 +4241,8 @@ mmapfile *mmap_fopen(char *filename){
 		return NULL;
 
 	/* open the file */
-	if((fd=open(filename,mode))==-1){
-		free(new_mmapfile);
+	if((fd=open(filename,mode))==-1)
 		return NULL;
-	        }
 
 	/* get file info */
 	if((fstat(fd,&statbuf))==-1){
@@ -4456,25 +4307,23 @@ char *mmap_fgets(mmapfile *temp_mmapfile){
 
 	/* find the end of the string (or buffer) */
 	for(x=temp_mmapfile->current_position;x<temp_mmapfile->file_size;x++){
-		if(*(char *)((char *)temp_mmapfile->mmap_buf+x)=='\n'){
-			x++;
+		if(*(char *)(temp_mmapfile->mmap_buf+x)=='\n')
 			break;
-			}
 	        }
 
 	/* calculate length of line we just read */
-	len=(int)x-temp_mmapfile->current_position;
+	len=(int)x-temp_mmapfile->current_position+1;
 
 	/* allocate memory for the new line */
 	if((buf=(char *)malloc(len+1))==NULL)
 		return NULL;
 
 	/* copy string to newly allocated memory and terminate the string */
-	memcpy(buf,(char *)((char *)temp_mmapfile->mmap_buf+temp_mmapfile->current_position),len);
+	memcpy(buf,(char *)(temp_mmapfile->mmap_buf+temp_mmapfile->current_position),len);
 	buf[len]='\x0';
 
 	/* update the current position */
-	temp_mmapfile->current_position=x;
+	temp_mmapfile->current_position=x+1;
 
 	/* increment the current line */
 	temp_mmapfile->current_line++;
@@ -4535,18 +4384,15 @@ char *mmap_fgets_multiline(mmapfile *temp_mmapfile){
 /******************************************************************/
 
 /* initializes embedded perl interpreter */
-int init_embedded_perl(char **env){
+int init_embedded_perl(void){
 #ifdef EMBEDDEDPERL
 	char *embedding[] = { "", "" };
 	int exitstatus = 0;
 	char buffer[MAX_INPUT_BUFFER];
-	int argc = 2;
 
 	embedding[1]=p1_file;
 
 	use_embedded_perl=TRUE;
-
-	PERL_SYS_INIT3(&argc,&embedding,&env);
 
 	if((my_perl=perl_alloc())==NULL){
 		use_embedded_perl=FALSE;
@@ -4557,7 +4403,7 @@ int init_embedded_perl(char **env){
                 }
 
 	perl_construct(my_perl);
-	exitstatus=perl_parse(my_perl,xs_init,2,embedding,env);
+	exitstatus=perl_parse(my_perl,xs_init,2,embedding,NULL);
 	if(!exitstatus)
 		exitstatus=perl_run(my_perl);
 
@@ -4573,7 +4419,6 @@ int deinit_embedded_perl(void){
 	PL_perl_destruct_level=0;
 	perl_destruct(my_perl);
 	perl_free(my_perl);
-	PERL_SYS_TERM();
 
 #endif
 	return OK;
@@ -4749,33 +4594,8 @@ void * service_result_worker_thread(void *arg){
 		pollval=poll(&pfd,1,500);
 
 		/* loop if no data */
-		if(pollval==0)
+		if(pollval<=0)
 			continue;
-
-		/* check for errors */
-		if(pollval==-1){
-
-			switch(errno){
-			case EBADF:
-				write_to_log("service_result_worker_thread(): poll(): EBADF",logging_options,NULL);
-				break;
-			case ENOMEM:
-				write_to_log("service_result_worker_thread(): poll(): ENOMEM",logging_options,NULL);
-				break;
-			case EFAULT:
-				write_to_log("service_result_worker_thread(): poll(): EFAULT",logging_options,NULL);
-				break;
-			case EINTR:
-				/* this should never happen */
-				write_to_log("service_result_worker_thread(): poll(): EINTR (impossible)",logging_options,NULL);
-				break;
-			default:
-				write_to_log("service_result_worker_thread(): poll(): Unknown errno value.",logging_options,NULL);
-				break;
-			        }
-
-			continue;
-		        }
 
 		/* should we shutdown? */
 		pthread_testcancel();
@@ -4789,7 +4609,7 @@ void * service_result_worker_thread(void *arg){
 		if(buffer_items<SERVICE_BUFFER_SLOTS){
 
 			/* clear the message buffer */
-			memset((void *)&message,0,sizeof(service_message));
+			bzero((void *)&message,sizeof(service_message));
 
 			/* initialize the number of bytes to read */
 			bytes_to_read=sizeof(service_message);
@@ -4922,10 +4742,6 @@ void * command_file_worker_thread(void *arg){
 		buffer_items=external_command_buffer.items;
 		pthread_mutex_unlock(&external_command_buffer.buffer_lock);
 
-#ifdef DEBUG_CFWT
-		printf("(CFWT) BUFFER ITEMS: %d/%d\n",buffer_items,COMMAND_BUFFER_SLOTS);
-#endif
-
 		/* process all commands in the file (named pipe) if there's some space in the buffer */
 		if(buffer_items<COMMAND_BUFFER_SLOTS){
 
@@ -4934,10 +4750,6 @@ void * command_file_worker_thread(void *arg){
 
 			/* read and process the next command in the file */
 			while(fgets(input_buffer,(int)(sizeof(input_buffer)-1),command_file_fp)!=NULL){
-
-#ifdef DEBUG_CFWT
-				printf("(CFWT) READ: %s",input_buffer);
-#endif
 
 				/* submit the external command for processing (retry if buffer is full) */
 				while((result=submit_external_command(input_buffer,&buffer_items))==ERROR && buffer_items==COMMAND_BUFFER_SLOTS){
@@ -4950,10 +4762,6 @@ void * command_file_worker_thread(void *arg){
 					/* should we shutdown? */
 					pthread_testcancel();
 				        }
-
-#ifdef DEBUG_CFWT
-				printf("(CFWT) RES: %d, BUFFER_ITEMS: %d/%d\n",result,buffer_items,COMMAND_BUFFER_SLOTS);
-#endif
 
 				/* bail if the circular buffer is full */
 				if(buffer_items==COMMAND_BUFFER_SLOTS)
@@ -5054,24 +4862,6 @@ int submit_raw_external_command(char *cmd, time_t *ts, int *buffer_items){
 
 
 
-/******************************************************************/
-/************************* MISC FUNCTIONS *************************/
-/******************************************************************/
-
-/* returns Nagios version */
-char *get_program_version(void){
-
-	return (char *)PROGRAM_VERSION;
-        }
-
-
-/* returns Nagios modification date */
-char *get_program_modification_date(void){
-
-	return (char *)PROGRAM_MODIFICATION_DATE;
-        }
-
-
 
 /******************************************************************/
 /*********************** CLEANUP FUNCTIONS ************************/
@@ -5087,9 +4877,9 @@ void cleanup(void){
 #ifdef USE_EVENT_BROKER
 	/* unload modules */
 	if(test_scheduling==FALSE && verify_config==FALSE){
-		neb_free_callback_list();
 		neb_unload_all_modules(NEBMODULE_FORCE_UNLOAD,(sigshutdown==TRUE)?NEBMODULE_NEB_SHUTDOWN:NEBMODULE_NEB_RESTART);
 		neb_free_module_list();
+		neb_free_callback_list();
 		neb_deinit_modules();
 	        }
 #endif
@@ -5379,7 +5169,6 @@ int reset_variables(void){
 	log_rotation_method=LOG_ROTATION_NONE;
 
 	last_command_check=0L;
-	last_command_status_update=0L;
 	last_log_rotation=0L;
 
         max_parallel_service_checks=DEFAULT_MAX_PARALLEL_SERVICE_CHECKS;
@@ -5412,7 +5201,7 @@ int reset_variables(void){
 
 	date_format=DATE_FORMAT_US;
 
-	for(x=0;x<MACRO_X_COUNT;x++)
+	for(x=0;x<=MACRO_X_COUNT;x++)
 		macro_x[x]=NULL;
 
 	for(x=0;x<MAX_COMMAND_ARGUMENTS;x++)

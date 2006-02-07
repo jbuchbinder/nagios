@@ -2,14 +2,15 @@
  *
  * CONFIG.C - Configuration input and verification routines for Nagios
  *
- * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   12-26-2005
+ * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   12-08-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -75,8 +76,6 @@ extern int      ochp_timeout;
 extern int      log_initial_states;
 
 extern int      daemon_mode;
-extern int      daemon_dumps_core;
-
 extern int      verify_config;
 extern int      test_scheduling;
 
@@ -134,7 +133,7 @@ extern int      status_update_interval;
 
 extern int      time_change_threshold;
 
-extern unsigned long event_broker_options;
+extern int      event_broker_options;
 
 extern int      process_performance_data;
 
@@ -1345,10 +1344,9 @@ int read_main_config_file(char *main_config_file){
 			}
 		else if(!strcmp(variable,"event_broker_options")){
 			strip(value);
-			if(!strcmp(value,"-1"))
+			event_broker_options=atoi(value);
+			if(event_broker_options<0)
 				event_broker_options=BROKER_EVERYTHING;
-			else
-				event_broker_options=strtoul(value,NULL,0);
 #ifdef DEBUG1
 			printf("\t\tevent_broker_options set to %d\n",event_broker_options);
 #endif
@@ -1386,20 +1384,6 @@ int read_main_config_file(char *main_config_file){
 			printf("\t\tuse_true_regexp_matching to %s\n",(use_true_regexp_matching==TRUE)?"TRUE":"FALSE");
 #endif
 		        }
-		else if(!strcmp(variable,"daemon_dumps_core")){
-			if(strlen(value)!=1||value[0]<'0'||value[0]>'1'){
-				strcpy(error_message,"Illegal value for daemon_dumps_core");
-				error=TRUE;
-				break;
-				}
-
-			strip(value);
-			daemon_dumps_core=(atoi(value)>0)?TRUE:FALSE;
-
-#ifdef DEBUG1
-			printf("\t\tdaemon_dumps_core set to %s\n",(daemon_dumps_core==TRUE)?"TRUE":"FALSE");
-#endif
-			}
 
 		/*** AUTH_FILE VARIABLE USED BY EMBEDDED PERL INTERPRETER ***/
 		else if(!strcmp(variable,"auth_file")){
@@ -2277,7 +2261,7 @@ int pre_flight_check(void){
 
 		/* we couldn't find a hostgroup or service */
 		if(found==FALSE){
-			snprintf(temp_buffer,sizeof(temp_buffer),"Warning: Contact group '%s' is not used in any host/service definitions or host/service escalations!",temp_contactgroup->group_name);
+			snprintf(temp_buffer,sizeof(temp_buffer),"Warning: Contact group '%s' is not used in any hostgroup/service definitions or host/hostgroup/service escalations!",temp_contactgroup->group_name);
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			write_to_logs_and_console(temp_buffer,NSLOG_VERIFICATION_WARNING,TRUE);
 			warnings++;
@@ -2376,7 +2360,7 @@ int pre_flight_check(void){
 		/* find the dependent service */
 		temp_service=find_service(temp_sd->dependent_host_name,temp_sd->dependent_service_description);
 		if(temp_service==NULL){
-			snprintf(temp_buffer,sizeof(temp_buffer),"Error: Dependent service '%s' on host '%s' specified in service dependency for service '%s' on host '%s' is not defined anywhere!",temp_sd->dependent_service_description,temp_sd->dependent_host_name,temp_sd->service_description,temp_sd->host_name);
+			snprintf(temp_buffer,sizeof(temp_buffer),"Error: Dependent service specified in service dependency for service '%s' on host '%s' is not defined anywhere!",temp_sd->dependent_service_description,temp_sd->dependent_host_name);
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			write_to_logs_and_console(temp_buffer,NSLOG_VERIFICATION_ERROR,TRUE);
 			errors++;
@@ -2385,7 +2369,7 @@ int pre_flight_check(void){
 		/* find the service we're depending on */
 		temp_service2=find_service(temp_sd->host_name,temp_sd->service_description);
 		if(temp_service2==NULL){
-			snprintf(temp_buffer,sizeof(temp_buffer),"Error: Service '%s' on host '%s' specified in service dependency for service '%s' on host '%s' is not defined anywhere!",temp_sd->service_description,temp_sd->host_name,temp_sd->dependent_service_description,temp_sd->dependent_host_name);
+			snprintf(temp_buffer,sizeof(temp_buffer),"Error: Service specified in service dependency for service '%s' on host '%s' is not defined anywhere!",temp_sd->dependent_service_description,temp_sd->dependent_host_name);
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			write_to_logs_and_console(temp_buffer,NSLOG_VERIFICATION_ERROR,TRUE);
 			errors++;
@@ -2614,11 +2598,6 @@ int pre_flight_check(void){
 	found=FALSE;
 	result=OK;
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
-
-		/* clear checked flag for all hosts */
-		for(temp_host2=host_list;temp_host2!=NULL;temp_host2=temp_host2->next)
-			temp_host2->circular_path_checked=FALSE;
-
 		found=check_for_circular_path(temp_host,temp_host);
 		if(found==TRUE){
 			sprintf(temp_buffer,"Error: There is a circular parent/child path that exists for host '%s'!",temp_host->name);
@@ -2646,7 +2625,7 @@ int pre_flight_check(void){
 
 		/* clear checked flag for all dependencies */
 		for(temp_sd2=servicedependency_list;temp_sd2!=NULL;temp_sd2=temp_sd2->next)
-			temp_sd2->circular_path_checked=FALSE;
+			temp_sd2->has_been_checked=FALSE;
 
 		found=check_for_circular_servicedependency(temp_sd,temp_sd,EXECUTION_DEPENDENCY);
 		if(found==TRUE){
@@ -2661,7 +2640,7 @@ int pre_flight_check(void){
 
 		/* clear checked flag for all dependencies */
 		for(temp_sd2=servicedependency_list;temp_sd2!=NULL;temp_sd2=temp_sd2->next)
-			temp_sd2->circular_path_checked=FALSE;
+			temp_sd2->has_been_checked=FALSE;
 
 		found=check_for_circular_servicedependency(temp_sd,temp_sd,NOTIFICATION_DEPENDENCY);
 		if(found==TRUE){
@@ -2676,7 +2655,7 @@ int pre_flight_check(void){
 
 		/* clear checked flag for all dependencies */
 		for(temp_hd2=hostdependency_list;temp_hd2!=NULL;temp_hd2=temp_hd2->next)
-			temp_hd2->circular_path_checked=FALSE;
+			temp_hd2->has_been_checked=FALSE;
 
 		found=check_for_circular_hostdependency(temp_hd,temp_hd,EXECUTION_DEPENDENCY);
 		if(found==TRUE){
@@ -2691,7 +2670,7 @@ int pre_flight_check(void){
 
 		/* clear checked flag for all dependencies */
 		for(temp_hd2=hostdependency_list;temp_hd2!=NULL;temp_hd2=temp_hd2->next)
-			temp_hd2->circular_path_checked=FALSE;
+			temp_hd2->has_been_checked=FALSE;
 
 		found=check_for_circular_hostdependency(temp_hd,temp_hd,NOTIFICATION_DEPENDENCY);
 		if(found==TRUE){

@@ -2,14 +2,15 @@
  *
  * CGIAUTH.C - Authorization utilities for Nagios CGIs
  *
- * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   03-23-2005
+ * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   10-31-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -229,7 +230,7 @@ int is_authorized_for_host(host *hst, authdata *authinfo){
         }
 
 
-/* check if user is authorized to view information about all hosts in a particular hostgroup */
+/* check if user is authorized to view information about AT LEAST ONE host in a particular hostgroup */
 int is_authorized_for_hostgroup(hostgroup *hg, authdata *authinfo){
 	hostgroupmember *temp_hostgroupmember;
 	host *temp_host;
@@ -250,7 +251,7 @@ int is_authorized_for_hostgroup(hostgroup *hg, authdata *authinfo){
 
 
 
-/* check if user is authorized to view information about all services in a particular servicegroup */
+/* check if user is authorized to view information about AT LEAST ONE service in a particular servicegroup */
 int is_authorized_for_servicegroup(servicegroup *sg, authdata *authinfo){
 	servicegroupmember *temp_servicegroupmember;
 	service *temp_service;

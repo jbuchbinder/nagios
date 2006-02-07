@@ -2,14 +2,15 @@
  *
  * EXTINFO.C -  Nagios Extended Information CGI
  *
- * Copyright (c) 1999-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 01-20-2006
+ * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 11-05-2004
  *
  * License:
  * 
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -67,7 +68,6 @@ extern scheduled_downtime  *scheduled_downtime_list;
 extern hoststatus *hoststatus_list;
 extern servicestatus *servicestatus_list;
 extern hostgroup *hostgroup_list;
-extern servicegroup *servicegroup_list;
 
 
 #define MAX_MESSAGE_BUFFER		4096
@@ -308,16 +308,24 @@ int main(void){
 				printf("<DIV CLASS='dataTitle'>(%s)</DIV><BR>\n",temp_host->name);
 				printf("<DIV CLASS='data'>Member of</DIV><DIV CLASS='dataTitle'>");
 				for(temp_hostgroup=hostgroup_list;temp_hostgroup!=NULL;temp_hostgroup=temp_hostgroup->next){
-					if(is_host_member_of_hostgroup(temp_hostgroup,temp_host)==TRUE){
-						if(found==TRUE)
-							printf(", ");	
-						printf("<A HREF='%s?hostgroup=%s&style=overview'>%s</A>",STATUS_CGI,url_encode(temp_hostgroup->group_name),temp_hostgroup->group_name);
-						found=TRUE;
-						}
+					hostgroupmember *temp_member=temp_hostgroup->members;
+				        while(temp_member!=NULL){
+
+				                /* we found a match */
+				                if(!strcmp(temp_member->host_name,temp_host->name)) {
+							if (found==TRUE)
+								printf(", ");	
+							printf("<A HREF='%s?hostgroup=%s&style=overview'>%s</A>",STATUS_CGI,url_encode(temp_hostgroup->group_name),temp_hostgroup->group_name);
+							found=TRUE;
+							}
+						
+				                temp_member=temp_member->next;
+			                	}		
 					}
 			
-				if(found==FALSE)
-					printf("No hostgroups");
+				if(found==FALSE) {
+						printf("No hostgroups");
+					}
 				printf("</DIV><BR>\n");
 				printf("<DIV CLASS='data'>%s</DIV>\n",temp_host->address);
 			        }
@@ -325,20 +333,6 @@ int main(void){
 				printf("<DIV CLASS='data'>Service</DIV><DIV CLASS='dataTitle'>%s</DIV><DIV CLASS='data'>On Host</DIV>\n",service_desc);
 				printf("<DIV CLASS='dataTitle'>%s</DIV>\n",temp_host->alias);
 				printf("<DIV CLASS='dataTitle'>(<A HREF='%s?type=%d&host=%s'>%s</a>)</DIV><BR>\n",EXTINFO_CGI,DISPLAY_HOST_INFO,url_encode(temp_host->name),temp_host->name);
-                                printf("<DIV CLASS='data'>Member of</DIV><DIV CLASS='dataTitle'>");
-                                for(temp_servicegroup=servicegroup_list;temp_servicegroup!=NULL;temp_servicegroup=temp_servicegroup->next){
-					if(is_service_member_of_servicegroup(temp_servicegroup,temp_service)==TRUE){
-						if(found==TRUE)
-							printf(", ");
-						printf("<A HREF='%s?servicegroup=%s&style=overview'>%s</A>",STATUS_CGI,url_encode(temp_servicegroup->group_name),temp_servicegroup->group_name);
-						found=TRUE;
-					        }
-                                        }
-
-                                if(found==FALSE)
-					printf("No servicegroups.");
-                                printf("</DIV><BR>\n");
-
 				printf("<DIV CLASS='data'>%s</DIV>\n",temp_host->address);
 				}
 			if(display_type==DISPLAY_HOSTGROUP_INFO){
@@ -477,6 +471,7 @@ int main(void){
 
 	/* free all allocated memory */
 	free_memory();
+	free_extended_data();
 	free_comment_data();
 	free_downtime_data();
 
@@ -989,7 +984,7 @@ void show_host_info(void){
 
 		printf("<TR><TD CLASS='dataVar'>Host Status:</td><td CLASS='dataVal'><DIV CLASS='%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></td></tr>\n",bg_class,state_string,(temp_hoststatus->problem_has_been_acknowledged==TRUE)?"(Has been acknowledged)":"");
 
-		printf("<TR><TD CLASS='dataVar'>Status Information:</td><td CLASS='dataVal'>%s</td></tr>\n",(temp_hoststatus->plugin_output==NULL)?"":temp_hoststatus->plugin_output);
+		printf("<TR><TD CLASS='dataVar'>Status Information:</td><td CLASS='dataVal'>%s</td></tr>\n",temp_hoststatus->plugin_output);
 
 		printf("<TR><TD CLASS='dataVar'>Performance Data:</td><td CLASS='dataVal'>%s</td></tr>\n",(temp_hoststatus->perf_data==NULL)?"":temp_hoststatus->perf_data);
 
@@ -1125,9 +1120,9 @@ void show_host_info(void){
 	if(nagios_process_state==STATE_OK){
 
 		printf("<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 CLASS='command'>\n");
-#ifdef USE_STATUSMAP
+
 		printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Locate Host On Map' TITLE='Locate Host On Map'></td><td CLASS='command'><a href='%s?host=%s'>Locate host on map</a></td></tr>\n",url_images_path,STATUSMAP_ICON,STATUSMAP_CGI,url_encode(host_name));
-#endif
+
 		if(temp_hoststatus->checks_enabled==TRUE){
 			printf("<tr CLASS='command'><td><img src='%s%s' border=0 ALT='Disable Active Checks Of This Host' TITLE='Disable Active Checks Of This Host'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s'>Disable active checks of this host</a></td></tr>\n",url_images_path,DISABLED_ICON,COMMAND_CGI,CMD_DISABLE_HOST_CHECK,url_encode(host_name));
 			printf("<tr CLASS='data'><td><img src='%s%s' border=0 ALT='Re-schedule Next Host Check' TITLE='Re-schedule Next Host Check'></td><td CLASS='command'><a href='%s?cmd_typ=%d&host=%s'>Re-schedule the next check of this host</a></td></tr>\n",url_images_path,DELAY_ICON,COMMAND_CGI,CMD_SCHEDULE_HOST_CHECK,url_encode(host_name));
@@ -1299,7 +1294,7 @@ void show_service_info(void){
 			}
 		printf("<TR><TD CLASS='dataVar'>Current Status:</TD><TD CLASS='dataVal'><DIV CLASS='%s'>&nbsp;&nbsp;%s&nbsp;&nbsp;%s&nbsp;&nbsp;</DIV></TD></TR>\n",bg_class,state_string,(temp_svcstatus->problem_has_been_acknowledged==TRUE)?"(Has been acknowledged)":"");
 
-		printf("<TR><TD CLASS='dataVar'>Status Information:</TD><TD CLASS='dataVal'>%s</TD></TR>\n",(temp_svcstatus->plugin_output==NULL)?"":temp_svcstatus->plugin_output);
+		printf("<TR><TD CLASS='dataVar'>Status Information:</TD><TD CLASS='dataVal'>%s</TD></TR>\n",temp_svcstatus->plugin_output);
 
 		printf("<TR><TD CLASS='dataVar'>Performance Data:</td><td CLASS='dataVal'>%s</td></tr>\n",(temp_svcstatus->perf_data==NULL)?"":temp_svcstatus->perf_data);
 
@@ -1896,7 +1891,7 @@ void show_all_comments(void){
 	        }
 
 	if(total_comments==0)
-		printf("<TR CLASS='commentOdd'><TD CLASS='commentOdd' COLSPAN=10>There are no service comments</TD></TR>");
+		printf("<TR CLASS='commentOdd'><TD CLASS='commentOdd' COLSPAN=9>There are no service comments</TD></TR>");
 
 	printf("</TD></TR>\n");
 	printf("</TABLE>\n");

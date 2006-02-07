@@ -2,14 +2,15 @@
  *
  * NEBMODS.C - Event Broker Module Functions
  *
- * Copyright (c) 2002-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   03-24-2005
+ * Copyright (c) 2002-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   12-08-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -236,7 +237,7 @@ int neb_load_module(nebmodule *mod){
 
 	/* run the module's init function */
 	initfunc=mod->init_func;
-	result=(*initfunc)(NEBMODULE_NORMAL_LOAD,mod->args,mod->module_handle);
+	result=(*initfunc)(NEBMODULE_NORMAL_LOAD,mod->args,mod);
 
 	/* if the init function returned an error, unload the module */
 	if(result!=OK){
@@ -320,9 +321,6 @@ int neb_unload_module(nebmodule *mod, int flags, int reason){
 			return ERROR;
 	        }
 
-	/* deregister all of the module's callbacks */
-	neb_deregister_module_callbacks(mod);
-
 	/* unload the module */
 #ifdef USE_LTDL
 	result=lt_dlclose(mod->module_handle);
@@ -391,8 +389,7 @@ int neb_set_module_info(void *handle, int type, char *data){
 /****************************************************************************/
 
 /* allows a module to register a callback function */
-int neb_register_callback(int callback_type, void *mod_handle, int priority, int (*callback_func)(int,void *)){
-	nebmodule *temp_module;
+int neb_register_callback(int callback_type, int priority, int (*callback_func)(int,void *)){
 	nebcallback *new_callback;
 	nebcallback *temp_callback;
 	nebcallback *last_callback;
@@ -403,20 +400,9 @@ int neb_register_callback(int callback_type, void *mod_handle, int priority, int
 	if(neb_callback_list==NULL)
 		return NEBERROR_NOCALLBACKLIST;
 
-	if(mod_handle==NULL)
-		return NEBERROR_NOMODULEHANDLE;
-
 	/* make sure the callback type is within bounds */
 	if(callback_type<0 || callback_type>=NEBCALLBACK_NUMITEMS)
 		return NEBERROR_CALLBACKBOUNDS;
-
-	/* make sure module handle is valid */
-	for(temp_module=neb_module_list;temp_module;temp_module=temp_module->next){
-		if((void *)temp_module->module_handle==(void *)mod_handle)
-			break;
-	        }
-	if(temp_module==NULL)
-		return NEBERROR_BADMODULEHANDLE;
 
 	/* allocate memory */
 	new_callback=(nebcallback *)malloc(sizeof(nebcallback));
@@ -424,7 +410,6 @@ int neb_register_callback(int callback_type, void *mod_handle, int priority, int
 		return NEBERROR_NOMEM;
 	
 	new_callback->priority=priority;
-	new_callback->module_handle=(void *)mod_handle;
 	new_callback->callback_func=(void *)callback_func;
 
 	/* add new function to callback list, sorted by priority (first come, first served for same priority) */
@@ -448,33 +433,6 @@ int neb_register_callback(int callback_type, void *mod_handle, int priority, int
 				last_callback->next=new_callback;
 			        }
 		        }
-	        }
-
-	return OK;
-        }
-
-
-
-/* dregisters all callback functions for a given module */
-int neb_deregister_module_callbacks(nebmodule *mod){
-	nebcallback *temp_callback;
-	nebcallback *next_callback;
-	int callback_type;
-
-	if(mod==NULL)
-		return NEBERROR_NOMODULE;
-
-	if(neb_callback_list==NULL)
-		return OK;
-
-	for(callback_type=0;callback_type<NEBCALLBACK_NUMITEMS;callback_type++){
-		for(temp_callback=neb_callback_list[callback_type];temp_callback!=NULL;temp_callback=next_callback){
-			printf("TEMP_CALLBACK: %x\n",temp_callback);
-			next_callback=temp_callback->next;
-			if((void *)temp_callback->module_handle==(void *)mod->module_handle)
-				neb_deregister_callback(callback_type,temp_callback->callback_func);
-		        }
-
 	        }
 
 	return OK;
@@ -513,13 +471,9 @@ int neb_deregister_callback(int callback_type, int (*callback_func)(int,void *))
 		return NEBERROR_CALLBACKNOTFOUND;
 
 	else{
-		/* only one item in the list */
-		if (temp_callback!=last_callback->next)
-			neb_callback_list[callback_type]=NULL;
-		else
-			last_callback->next=next_callback;
+		last_callback->next=next_callback;
 		free(temp_callback);
-		}
+	        }
 	
 	return OK;
         }
@@ -577,14 +531,12 @@ int neb_free_callback_list(void){
 	nebcallback *next_callback;
 	int x;
 
-	if(neb_callback_list==NULL)
-		return OK;
-
 	for(x=0;x<NEBCALLBACK_NUMITEMS;x++){
 
 		for(temp_callback=neb_callback_list[x];temp_callback!=NULL;temp_callback=next_callback){
 			next_callback=temp_callback->next;
 			free(temp_callback);
+			temp_callback=next_callback;
 	                }
 
 		neb_callback_list[x]=NULL;
