@@ -3,12 +3,12 @@
  * NAGIOS.C - Core Program Code For Nagios
  *
  * Program: Nagios
- * Version: 2.0
+ * Version: 2.0b4
  * License: GPL
- * Copyright (c) 1999-2006 Ethan Galstad (http://www.nagios.org)
+ * Copyright (c) 1999-2005 Ethan Galstad (http://www.nagios.org)
  *
  * First Written:   01-28-1999 (start of development)
- * Last Modified:   02-07-2006
+ * Last Modified:   08-02-2005
  *
  * Description:
  *
@@ -21,8 +21,9 @@
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -123,7 +124,6 @@ int             auto_reschedule_checks=DEFAULT_AUTO_RESCHEDULE_CHECKS;
 int             auto_rescheduling_window=DEFAULT_AUTO_RESCHEDULING_WINDOW;
 
 time_t          last_command_check=0L;
-time_t          last_command_status_update=0L;
 time_t          last_log_rotation=0L;
 
 int             use_aggressive_host_checking=DEFAULT_AGGRESSIVE_HOST_CHECKING;
@@ -173,7 +173,7 @@ int             status_update_interval=DEFAULT_STATUS_UPDATE_INTERVAL;
 
 int             time_change_threshold=DEFAULT_TIME_CHANGE_THRESHOLD;
 
-unsigned long   event_broker_options=BROKER_NOTHING;
+int             event_broker_options=BROKER_NOTHING;
 
 int             process_performance_data=DEFAULT_PROCESS_PERFORMANCE_DATA;
 
@@ -284,7 +284,7 @@ int main(int argc, char **argv){
 
 	if(daemon_mode==FALSE){
 		printf("\nNagios %s\n",PROGRAM_VERSION);
-		printf("Copyright (c) 1999-2006 Ethan Galstad (http://www.nagios.org)\n");
+		printf("Copyright (c) 1999-2005 Ethan Galstad (http://www.nagios.org)\n");
 		printf("Last Modified: %s\n",PROGRAM_MODIFICATION_DATE);
 		printf("License: GPL\n\n");
 	        }
@@ -293,8 +293,9 @@ int main(int argc, char **argv){
 	if(display_license==TRUE){
 
 		printf("This program is free software; you can redistribute it and/or modify\n");
-		printf("it under the terms of the GNU General Public License version 2 as\n");
-		printf("published by the Free Software Foundation.\n\n");
+		printf("it under the terms of the GNU General Public License as published by\n");
+		printf("the Free Software Foundation; either version 2 of the License, or\n");
+		printf("(at your option) any later version.\n\n");
 		printf("This program is distributed in the hope that it will be useful,\n");
 		printf("but WITHOUT ANY WARRANTY; without even the implied warranty of\n");
 		printf("MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n");
@@ -379,15 +380,8 @@ int main(int argc, char **argv){
 		printf("Reading configuration data...\n\n");
 
 		/* read in the configuration files (main config file, resource and object config files) */
-		if((result=read_main_config_file(config_file))==OK){
-
-			/* drop privileges */
-			if((result=drop_privileges(nagios_user,nagios_group))==ERROR)
-				printf("Failed to drop privileges.  Aborting.");
-			else
-				/* read object config files */
-				result=read_all_object_data(config_file);
-		        }
+		if((result=read_main_config_file(config_file))==OK)
+			result=read_all_object_data(config_file);
 
 		/* there was a problem reading the config files */
 		if(result!=OK){
@@ -451,15 +445,8 @@ int main(int argc, char **argv){
 		reset_variables();
 
 		/* read in the configuration files (main config file and all host config files) */
-		if((result=read_main_config_file(config_file))==OK){
-
-			/* drop privileges */
-			if((result=drop_privileges(nagios_user,nagios_group))==ERROR)
-				printf("Failed to drop privileges.  Aborting.");
-			else
-				/* read object config files */
-				result=read_all_object_data(config_file);
-		        }
+		if((result=read_main_config_file(config_file))==OK)
+			result=read_all_object_data(config_file);
 		if(result!=OK)
 			printf("***> One or more problems was encountered while reading configuration data...\n");
 
@@ -700,18 +687,12 @@ int main(int argc, char **argv){
 			/* reset the restart flag */
 			sigrestart=FALSE;
 
-#ifdef USE_EVENT_BROKER
-			/* send program data to broker */
-			broker_program_state(NEBTYPE_PROCESS_EVENTLOOPSTART,NEBFLAG_NONE,NEBATTR_NONE,NULL);
-#endif
-
 		        /***** start monitoring all services *****/
 			/* (doesn't return until a restart or shutdown signal is encountered) */
 			event_execution_loop();
 
 #ifdef USE_EVENT_BROKER
 			/* send program data to broker */
-			broker_program_state(NEBTYPE_PROCESS_EVENTLOOPEND,NEBFLAG_NONE,NEBATTR_NONE,NULL);
 			if(sigshutdown==TRUE)
 				broker_program_state(NEBTYPE_PROCESS_SHUTDOWN,NEBFLAG_USER_INITIATED,NEBATTR_SHUTDOWN_NORMAL,NULL);
 			else if(sigrestart==TRUE)

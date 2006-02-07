@@ -3,13 +3,14 @@
  * FLAPPING.C - State flap detection and handling routines for Nagios
  *
  * Copyright (c) 2001-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   08-12-2005
+ * Last Modified:   04-17-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -285,7 +286,7 @@ void set_service_flap(service *svc, double percent_change, double high_threshold
 	write_to_all_logs(buffer,NSLOG_RUNTIME_WARNING);
 
 	/* add a non-persistent comment to the service */
-	snprintf(buffer,sizeof(buffer)-1,"Notifications for this service are being suppressed because it was detected as having been flapping between different states (%2.1f%% change >= %2.1f%% threshold).  When the service state stabilizes and the flapping stops, notifications will be re-enabled.",percent_change,high_threshold);
+	snprintf(buffer,sizeof(buffer)-1,"Notifications for this service are being supressed because it was detected as having been flapping between different states (%2.1f%% change >= %2.1f%% threshold).  When the service state stabilizes and the flapping stops, notifications will be re-enabled.",percent_change,high_threshold);
 	buffer[sizeof(buffer)-1]='\x0';
 	add_new_service_comment(FLAPPING_COMMENT,svc->host_name,svc->description,time(NULL),"(Nagios Process)",buffer,0,COMMENTSOURCE_INTERNAL,FALSE,(time_t)0,&(svc->flapping_comment_id));
 
@@ -372,7 +373,7 @@ void set_host_flap(host *hst, double percent_change, double high_threshold, doub
 	write_to_all_logs(buffer,NSLOG_RUNTIME_WARNING);
 
 	/* add a non-persistent comment to the host */
-	snprintf(buffer,sizeof(buffer)-1,"Notifications for this host are being suppressed because it was detected as having been flapping between different states (%2.1f%% change > %2.1f%% threshold).  When the host state stabilizes and the flapping stops, notifications will be re-enabled.",percent_change,high_threshold);
+	snprintf(buffer,sizeof(buffer)-1,"Notifications for this host are being supressed because it was detected as having been flapping between different states (%2.1f%% change > %2.1f%% threshold).  When the host state stabilizes and the flapping stops, notifications will be re-enabled.",percent_change,high_threshold);
 	buffer[sizeof(buffer)-1]='\x0';
 	add_new_host_comment(FLAPPING_COMMENT,hst->name,time(NULL),"(Nagios Process)",buffer,0,COMMENTSOURCE_INTERNAL,FALSE,(time_t)0,&(hst->flapping_comment_id));
 

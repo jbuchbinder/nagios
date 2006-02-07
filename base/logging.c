@@ -2,14 +2,15 @@
  *
  * LOGGING.C - Log file functions for use with Nagios
  *
- * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   12-12-2005
+ * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   11-05-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -195,7 +196,7 @@ int write_to_log(char *buffer, unsigned long data_type, time_t *timestamp){
 
 #ifdef USE_EVENT_BROKER
 	/* send data to the event broker */
-	broker_log_data(NEBTYPE_LOG_DATA,NEBFLAG_NONE,NEBATTR_NONE,buffer,data_type,log_time,NULL);
+	broker_log_data(NEBTYPE_LOG_DATA,NEBFLAG_NONE,NEBATTR_NONE,buffer,data_type,NULL);
 #endif
 
 #ifdef DEBUG0
@@ -429,11 +430,8 @@ int rotate_log_file(time_t rotation_time){
 	        }
 
 #ifdef USE_EVENT_BROKER
-	/* REMOVED - log rotation events are already handled by NEBTYPE_TIMEDEVENT_EXECUTE... */
 	/* send data to the event broker */
-        /*
-	broker_log_data(NEBTYPE_LOG_ROTATION,NEBFLAG_NONE,NEBATTR_NONE,log_archive,log_rotation_method,0,NULL);
-	*/
+	broker_log_data(NEBTYPE_LOG_ROTATION,NEBFLAG_NONE,NEBATTR_NONE,log_archive,log_rotation_method,NULL);
 #endif
 
 	/* record the log rotation after it has been done... */

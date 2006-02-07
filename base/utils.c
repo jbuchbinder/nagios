@@ -2,14 +2,15 @@
  *
  * UTILS.C - Miscellaneous utility functions for Nagios
  *
- * Copyright (c) 1999-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   01-02-2006
+ * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   06-01-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -136,7 +137,6 @@ extern unsigned long modified_service_process_attributes;
 extern int      log_rotation_method;
 
 extern time_t   last_command_check;
-extern time_t	last_command_status_update;
 extern time_t   last_log_rotation;
 
 extern int      verify_config;
@@ -164,7 +164,7 @@ extern int      status_update_interval;
 
 extern int      time_change_threshold;
 
-extern unsigned long event_broker_options;
+extern int      event_broker_options;
 
 extern int      process_performance_data;
 
@@ -2568,7 +2568,7 @@ int set_macro_environment_var(char *name, char *value, int set){
 int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *output,int output_length){
         pid_t pid;
 	int status;
-	int result=0;
+	int result;
 	char buffer[MAX_INPUT_BUFFER];
 	char temp_buffer[MAX_INPUT_BUFFER];
 	int fd[2];
@@ -2596,7 +2596,6 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 	if(output!=NULL)
 		strcpy(output,"");
 	*early_timeout=FALSE;
-	*exectime=0.0;
 
 	/* if no command was passed, return with no error */
 	if(cmd==NULL)
@@ -2687,13 +2686,6 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 
 	/* get the command start time */
 	gettimeofday(&start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_system_command(NEBTYPE_SYSTEM_COMMAND_START,NEBFLAG_NONE,NEBATTR_NONE,start_time,end_time,*exectime,timeout,*early_timeout,result,cmd,NULL,NULL);
-#endif
 
 	/* fork */
 	pid=fork();
@@ -2914,7 +2906,7 @@ int my_system(char *cmd,int timeout,int *early_timeout,double *exectime,char *ou
 
 #ifdef USE_EVENT_BROKER
 		/* send data to event broker */
-		broker_system_command(NEBTYPE_SYSTEM_COMMAND_END,NEBFLAG_NONE,NEBATTR_NONE,start_time,end_time,*exectime,timeout,*early_timeout,result,cmd,output,NULL);
+		broker_system_command(NEBTYPE_SYSTEM_COMMAND,NEBFLAG_NONE,NEBATTR_NONE,*exectime,timeout,*early_timeout,result,cmd,output,NULL);
 #endif
 
 		/* close the pipe for reading */
@@ -4540,13 +4532,12 @@ int init_embedded_perl(char **env){
 	char *embedding[] = { "", "" };
 	int exitstatus = 0;
 	char buffer[MAX_INPUT_BUFFER];
-	int argc = 2;
 
 	embedding[1]=p1_file;
 
 	use_embedded_perl=TRUE;
 
-	PERL_SYS_INIT3(&argc,&embedding,&env);
+	PERL_SYS_INIT3(2,embedding,&env);
 
 	if((my_perl=perl_alloc())==NULL){
 		use_embedded_perl=FALSE;
@@ -5054,24 +5045,6 @@ int submit_raw_external_command(char *cmd, time_t *ts, int *buffer_items){
 
 
 
-/******************************************************************/
-/************************* MISC FUNCTIONS *************************/
-/******************************************************************/
-
-/* returns Nagios version */
-char *get_program_version(void){
-
-	return (char *)PROGRAM_VERSION;
-        }
-
-
-/* returns Nagios modification date */
-char *get_program_modification_date(void){
-
-	return (char *)PROGRAM_MODIFICATION_DATE;
-        }
-
-
 
 /******************************************************************/
 /*********************** CLEANUP FUNCTIONS ************************/
@@ -5379,7 +5352,6 @@ int reset_variables(void){
 	log_rotation_method=LOG_ROTATION_NONE;
 
 	last_command_check=0L;
-	last_command_status_update=0L;
 	last_log_rotation=0L;
 
         max_parallel_service_checks=DEFAULT_MAX_PARALLEL_SERVICE_CHECKS;

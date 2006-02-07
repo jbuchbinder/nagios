@@ -3,13 +3,14 @@
  * XSDDEFAULT.C - Default external status data input routines for Nagios
  *
  * Copyright (c) 2000-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   11-25-2005
+ * Last Modified:   05-25-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -289,7 +290,6 @@ int xsddefault_cleanup_status_data(char *config_file, int delete_status_data){
 
 /* write all status data to file */
 int xsddefault_save_status_data(void){
-	char temp_buffer[MAX_INPUT_BUFFER];
 	host *temp_host;
 	service *temp_service;
 	time_t current_time;
@@ -299,26 +299,12 @@ int xsddefault_save_status_data(void){
 	/* open a safe temp file for output */
 	snprintf(xsddefault_aggregate_temp_file,sizeof(xsddefault_aggregate_temp_file)-1,"%sXXXXXX",xsddefault_temp_file);
 	xsddefault_aggregate_temp_file[sizeof(xsddefault_aggregate_temp_file)-1]='\x0';
-	if((fd=mkstemp(xsddefault_aggregate_temp_file))==-1){
-
-		/* log an error */
-		snprintf(temp_buffer,sizeof(temp_buffer),"Error: Unable to create temp file for writing status data!\n");
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_ERROR,TRUE);
-
+	if((fd=mkstemp(xsddefault_aggregate_temp_file))==-1)
 		return ERROR;
-	        }
 	fp=fdopen(fd,"w");
 	if(fp==NULL){
-
 		close(fd);
 		unlink(xsddefault_aggregate_temp_file);
-
-		/* log an error */
-		snprintf(temp_buffer,sizeof(temp_buffer),"Error: Unable to open temp file '%s' for writing status data!\n",xsddefault_aggregate_temp_file);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_ERROR,TRUE);
-
 		return ERROR;
 	        }
 
@@ -483,15 +469,8 @@ int xsddefault_save_status_data(void){
 	fclose(fp);
 
 	/* move the temp file to the status log (overwrite the old status log) */
-	if(my_rename(xsddefault_aggregate_temp_file,xsddefault_status_log)){
-
-		/* log an error */
-		snprintf(temp_buffer,sizeof(temp_buffer),"Error: Unable to update status data file '%s'!\n",xsddefault_status_log);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_ERROR,TRUE);
-
+	if(my_rename(xsddefault_aggregate_temp_file,xsddefault_status_log))
 		return ERROR;
-	        }
 
 	return OK;
         }

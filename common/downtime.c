@@ -8,8 +8,9 @@
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -900,8 +901,8 @@ int add_downtime(int downtime_type, char *host_name, char *svc_description, time
 
 #ifdef NSCORE
 #ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_downtime_data(NEBTYPE_DOWNTIME_LOAD,NEBFLAG_NONE,NEBATTR_NONE,downtime_type,host_name,svc_description,entry_time,author,comment_data,start_time,end_time,fixed,triggered_by,duration,downtime_id,NULL);
+		/* send data to event broker */
+		broker_downtime_data(NEBTYPE_DOWNTIME_LOAD,NEBFLAG_NONE,NEBATTR_NONE,downtime_type,host_name,svc_description,entry_time,author,comment_data,start_time,end_time,fixed,triggered_by,duration,downtime_id,NULL);
 #endif
 #endif
 

@@ -19,14 +19,21 @@ int main(int argc, char **argv, char **env) {
 
 	char *embedding[] = { "", "p1.pl" };
 	char *plugin_output ;
-	char fname[64];
+	/* char plugin_output[1024]; */
+	char buffer[512];
+	char tmpfname[32];
+	char fname[32];
 	char *args[] = {"","0", "", "", NULL };
+	FILE *fp;
+
 	char command_line[80];
 	int exitstatus;
 	int pclose_result;
 
 	if((my_perl=perl_alloc())==NULL){
-		printf("%s\n","Error: Could not allocate memory for embedded Perl interpreter!"); 
+		snprintf(buffer,sizeof(buffer),"Error: Could not allocate memory for embedded Perl interpreter!\n");
+		buffer[sizeof(buffer)-1]='\x0';
+		printf("%s\n", buffer);
 		exit(1);
 	}
 	perl_construct(my_perl);
@@ -36,11 +43,14 @@ int main(int argc, char **argv, char **env) {
 		exitstatus=perl_run(my_perl);
 
 	        while(printf("Enter file name: ") && fgets(command_line, 80, stdin)) {
-			SV *plugin_hndlr_cr;
-		        STRLEN n_a;
+
+			SV *plugin_out_sv ;
 			int count = 0 ;
 
 			dSP;
+
+
+	                /* call the subroutine, passing it the filename as an argument */
 
 			command_line[strlen(command_line) -1] = '\0';
 
@@ -52,60 +62,34 @@ int main(int argc, char **argv, char **env) {
                         args[2] = "";
 
 			/* call our perl interpreter to compile and optionally cache the command */
+			count = perl_call_argv("Embed::Persistent::eval_file", G_DISCARD | G_EVAL, args);
 
 			ENTER; 
 			SAVETMPS;
 			PUSHMARK(SP);
-
 			XPUSHs(sv_2mortal(newSVpv(args[0],0)));
 			XPUSHs(sv_2mortal(newSVpv(args[1],0)));
 			XPUSHs(sv_2mortal(newSVpv(args[2],0)));
 			XPUSHs(sv_2mortal(newSVpv(args[3],0)));
-
 			PUTBACK;
-
-			count = call_pv("Embed::Persistent::eval_file", G_SCALAR | G_EVAL);
-
-			SPAGAIN;
-
-			/* check return status  */
-			if(SvTRUE(ERRSV)){
-				(void) POPs;
-
-				pclose_result=-2;
-				printf("embedded perl ran %s with error %s\n",fname,SvPVX(ERRSV));
-				continue;
-			} else {
-		                plugin_hndlr_cr = newSVsv(POPs);         
-
-	               		PUTBACK;
-                		FREETMPS;
-                		LEAVE;
-        		}
-
-			ENTER; 
-			SAVETMPS;
-			PUSHMARK(SP);
-
-			XPUSHs(sv_2mortal(newSVpv(args[0],0)));
-			XPUSHs(sv_2mortal(newSVpv(args[1],0)));
-			XPUSHs(plugin_hndlr_cr);
-			XPUSHs(sv_2mortal(newSVpv(args[3],0)));
-
-			PUTBACK;
-
 			count = perl_call_pv("Embed::Persistent::run_package", G_EVAL | G_ARRAY);
-
 			SPAGAIN;
-
-			plugin_output = POPpx ;
+			plugin_out_sv = POPs;
+			plugin_output = SvPOK(plugin_out_sv) && (SvCUR(plugin_out_sv) > 0) ? savepv(SvPVX(plugin_out_sv)) : savepv("(No output!)\n") ;
 			pclose_result = POPi ;
-
-			printf("embedded perl plugin return code and output was: %d & '%s'\n", pclose_result, plugin_output);
-
+			/* FIXME - no digits returned */
 			PUTBACK;
 			FREETMPS;
 			LEAVE;
+
+			/* check return status  */
+			if(SvTRUE(ERRSV)){
+				pclose_result=-2;
+				printf("embedded perl ran %s with error %s\n",fname,SvPV(ERRSV,PL_na));
+				continue;
+			}
+			
+			printf("embedded perl plugin return code and output was: %d & '%s'\n",pclose_result, plugin_output);
 
 		}
 

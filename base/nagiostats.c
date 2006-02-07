@@ -3,17 +3,18 @@
  * NAGIOSTATS.C - Displays Nagios Statistics
  *
  * Program: Nagiostats
- * Version: 2.0
+ * Version: 2.0b4
  * License: GPL
  * Copyright (c) 2003-2005 Ethan Galstad (nagios@nagios.org)
  *
- * Last Modified:   02-07-2006
+ * Last Modified:   08-02-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -222,8 +223,9 @@ int main(int argc, char **argv){
 	if(display_license==TRUE){
 
 		printf("This program is free software; you can redistribute it and/or modify\n");
-		printf("it under the terms of the GNU General Public License version 2 as\n");
-		printf("published by the Free Software Foundation.\n\n");
+		printf("it under the terms of the GNU General Public License as published by\n");
+		printf("the Free Software Foundation; either version 2 of the License, or\n");
+		printf("(at your option) any later version.\n\n");
 		printf("This program is distributed in the hope that it will be useful,\n");
 		printf("but WITHOUT ANY WARRANTY; without even the implied warranty of\n");
 		printf("MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n");
@@ -517,12 +519,12 @@ int display_stats(void){
 	printf("----------------------------------------------------\n");
 	printf("Status File:                          %s\n",status_file);
 	time_difference=(current_time-status_creation_date);
-	get_time_breakdown(time_difference,&days,&hours,&minutes,&seconds);
+	get_time_breakdown(time_difference,&days,&minutes,&hours,&seconds);
 	printf("Status File Age:                      %dd %dh %dm %ds\n",days,hours,minutes,seconds);
 	printf("Status File Version:                  %s\n",status_version);
 	printf("\n");
 	time_difference=(current_time-program_start);
-	get_time_breakdown(time_difference,&days,&hours,&minutes,&seconds);
+	get_time_breakdown(time_difference,&days,&minutes,&hours,&seconds);
 	printf("Program Running Time:                 %dd %dh %dm %ds\n",days,hours,minutes,seconds);
 	printf("\n");
 	printf("Total Services:                       %d\n",status_service_entries);

@@ -2,13 +2,14 @@
  *
  * Nagios Common Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 12-01-2005
+ * Last Modified: 05-22-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,19 +22,15 @@
  ************************************************************************/
 
 
-#define PROGRAM_VERSION "2.0"
-#define PROGRAM_MODIFICATION_DATE "02-07-2006"
+#define PROGRAM_VERSION "2.0b4"
+#define PROGRAM_MODIFICATION_DATE "08-02-2005"
 
 
 
 /* daemon is thread safe */
 #ifdef NSCORE
-#ifndef _REENTRANT
 #define _REENTRANT
-#endif
-#ifndef _THREAD_SAFE
 #define _THREAD_SAFE
-#endif
 #endif
 
 /* Experimental performance tweaks - use with caution */
@@ -284,9 +281,6 @@
 
 
 /************************** ACKNOWLEDGEMENT TYPES ************************/
-
-#define HOST_ACKNOWLEDGEMENT            0
-#define SERVICE_ACKNOWLEDGEMENT         1
 
 #define ACKNOWLEDGEMENT_NONE            0
 #define ACKNOWLEDGEMENT_NORMAL          1

@@ -3,13 +3,14 @@
  * OBJECTS.C - Object addition and search functions for Nagios
  *
  * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 12-26-2005
+ * Last Modified: 06-12-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -71,10 +72,6 @@ servicedependency **servicedependency_hashlist=NULL;
 hostescalation  **hostescalation_hashlist=NULL;
 serviceescalation **serviceescalation_hashlist=NULL;
 
-
-#ifdef NSCORE
-int __nagios_object_structure_version=CURRENT_OBJECT_STRUCTURE_VERSION;
-#endif
 
 
 
@@ -987,7 +984,7 @@ host *add_host(char *name, char *alias, char *address, char *check_period, int c
 
 	if(max_attempts<=0){
 #ifdef NSCORE
-		snprintf(temp_buffer,sizeof(temp_buffer)-1,"Error: Invalid max_check_attempts value for host '%s'\n",name);
+		snprintf(temp_buffer,sizeof(temp_buffer)-1,"Error: Invalid max_attempts value for host '%s'\n",name);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		write_to_logs_and_console(temp_buffer,NSLOG_CONFIG_ERROR,TRUE);
 #endif
@@ -1380,8 +1377,6 @@ host *add_host(char *name, char *alias, char *address, char *check_period, int c
 	new_host->total_services=0;
 	new_host->total_service_check_interval=0L;
 	new_host->modified_attributes=MODATTR_NONE;
-	new_host->circular_path_checked=FALSE;
-	new_host->contains_circular_path=FALSE;
 
 	/* allocate new plugin output buffer */
 	new_host->plugin_output=(char *)malloc(MAX_PLUGINOUTPUT_LENGTH);
@@ -2410,8 +2405,8 @@ contact *add_contact(char *name,char *alias, char *email, char *pager, char **ad
 #ifdef DEBUG1
 	printf("\tContact Name:                  %s\n",new_contact->name);
 	printf("\tContact Alias:                 %s\n",new_contact->alias);
-	printf("\tContact Email Address:         %s\n",(new_contact->email==NULL)?"":new_contact->email);
-	printf("\tContact Pager Address/Number:  %s\n",(new_contact->pager==NULL)?"":new_contact->pager);
+	printf("\tContact Email Address:         %s\n",new_contact->email);
+	printf("\tContact Pager Address/Number:  %s\n",new_contact->pager);
 	printf("\tSvc Notification Time Period:  %s\n",new_contact->service_notification_period);
 	printf("\tHost Notification Time Period: %s\n",new_contact->host_notification_period);
 #endif
@@ -2865,7 +2860,7 @@ service *add_service(char *host_name, char *description, char *check_period, int
 		return NULL;
 	        }
 
-	if(max_attempts<=0 || check_interval<0 || retry_interval<=0 || notification_interval<0){
+	if(max_attempts<=0 || check_interval<=0 || retry_interval<=0 || notification_interval<0){
 #ifdef NSCORE
 		snprintf(temp_buffer,sizeof(temp_buffer)-1,"Error: Invalid max_attempts, check_interval, retry_interval, or notification_interval value for service '%s' on host '%s'\n",description,host_name);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
@@ -3891,8 +3886,7 @@ servicedependency *add_service_dependency(char *dependent_host_name, char *depen
 	new_servicedependency->fail_on_pending=(fail_on_pending==1)?TRUE:FALSE;
 
 #ifdef NSCORE
-	new_servicedependency->circular_path_checked=FALSE;
-	new_servicedependency->contains_circular_path=FALSE;
+	new_servicedependency->has_been_checked=FALSE;
 #endif
 
 	new_servicedependency->next=NULL;
@@ -4044,11 +4038,6 @@ hostdependency *add_host_dependency(char *dependent_host_name, char *host_name, 
 	new_hostdependency->fail_on_down=(fail_on_down==1)?TRUE:FALSE;
 	new_hostdependency->fail_on_unreachable=(fail_on_unreachable==1)?TRUE:FALSE;
 	new_hostdependency->fail_on_pending=(fail_on_pending==1)?TRUE:FALSE;
-
-#ifdef NSCORE
-	new_hostdependency->circular_path_checked=FALSE;
-	new_hostdependency->contains_circular_path=FALSE;
-#endif
 
 	new_hostdependency->next=NULL;
 	new_hostdependency->nexthash=NULL;
@@ -5534,24 +5523,9 @@ int is_escalated_contact_for_service(service *svc, contact *cntct){
 int check_for_circular_path(host *root_hst, host *hst){
 	host *temp_host;
 
-	/* don't go into a loop, don't bother checking anymore if we know this host already has a loop */
-	if(root_hst->contains_circular_path==TRUE)
-		return TRUE;
-
-	/* host has already been checked - there is a path somewhere, but it may not be for this particular host... */
-	/* this should speed up detection for some loops */
-	if(hst->circular_path_checked==TRUE)
-		return FALSE;
-
-	/* set the check flag so we don't get into an infinite loop */
-	hst->circular_path_checked=TRUE;
-
 	/* check this hosts' parents to see if a circular path exists */
-	if(is_host_immediate_parent_of_host(root_hst,hst)==TRUE){
-		root_hst->contains_circular_path=TRUE;
-		hst->contains_circular_path=TRUE;
+	if(is_host_immediate_parent_of_host(root_hst,hst)==TRUE)
 		return TRUE;
-	        }
 
 	/* check all immediate children for a circular path */
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
@@ -5575,25 +5549,18 @@ int check_for_circular_servicedependency(servicedependency *root_dep, servicedep
 	if(root_dep->dependency_type!=dependency_type || dep->dependency_type!=dependency_type)
 		return FALSE;
 
-	/* don't go into a loop, don't bother checking anymore if we know this dependency already has a loop */
-	if(root_dep->contains_circular_path==TRUE)
+	/* dependency has already been checked */
+	/* changed to return TRUE - this should speed up detection for some loops (although they are not necessary loops for the root dep) - EG 05/29/03 */
+	if(dep->has_been_checked==TRUE)
 		return TRUE;
 
-	/* dependency has already been checked - there is a path somewhere, but it may not be for this particular dep... */
-	/* this should speed up detection for some loops */
-	if(dep->circular_path_checked==TRUE)
-		return FALSE;
-
 	/* set the check flag so we don't get into an infinite loop */
-	dep->circular_path_checked=TRUE;
+	dep->has_been_checked=TRUE;
 
 	/* is this service dependent on the root service? */
 	if(dep!=root_dep){
-		if(!strcmp(root_dep->dependent_host_name,dep->host_name) && !strcmp(root_dep->dependent_service_description,dep->service_description)){
-			root_dep->contains_circular_path=TRUE;
-			dep->contains_circular_path=TRUE;
+		if(!strcmp(root_dep->dependent_host_name,dep->host_name) && !strcmp(root_dep->dependent_service_description,dep->service_description))
 			return TRUE;
-		        }
 	        }
 
 	/* notification dependencies are ok at this point as long as they don't inherit */
@@ -5626,25 +5593,18 @@ int check_for_circular_hostdependency(hostdependency *root_dep, hostdependency *
 	if(root_dep->dependency_type!=dependency_type || dep->dependency_type!=dependency_type)
 		return FALSE;
 
-	/* don't go into a loop, don't bother checking anymore if we know this dependency already has a loop */
-	if(root_dep->contains_circular_path==TRUE)
+	/* dependency has already been checked */
+	/* changed to return TRUE - this should speed up detection for some loops (although they are not necessary loops for the root dep) - EG 05/29/03 */
+	if(dep->has_been_checked==TRUE)
 		return TRUE;
 
-	/* dependency has already been checked - there is a path somewhere, but it may not be for this particular dep... */
-	/* this should speed up detection for some loops */
-	if(dep->circular_path_checked==TRUE)
-		return FALSE;
-
 	/* set the check flag so we don't get into an infinite loop */
-	dep->circular_path_checked=TRUE;
+	dep->has_been_checked=TRUE;
 
 	/* is this host dependent on the root host? */
 	if(dep!=root_dep){
-		if(!strcmp(root_dep->dependent_host_name,dep->host_name)){
-			root_dep->contains_circular_path=TRUE;
-			dep->contains_circular_path=TRUE;
+		if(!strcmp(root_dep->dependent_host_name,dep->host_name))
 			return TRUE;
-		        }
 	        }
 
 	/* notification dependencies are ok at this point as long as they don't inherit */
