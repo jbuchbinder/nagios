@@ -3,13 +3,14 @@
  * SEHANDLERS.C - Service and host event and state handlers for Nagios
  *
  * Copyright (c) 1999-2004 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   12-19-2004
+ * Last Modified:   12-05-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -202,11 +203,6 @@ int handle_service_event(service *svc){
 	printf("handle_service_event() start\n");
 #endif
 
-#ifdef USE_EVENT_BROKER
-	/* send event data to broker */
-	broker_statechange_data(NEBTYPE_STATECHANGE_END,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_STATECHANGE,(void *)svc,svc->current_state,svc->state_type,svc->current_attempt,svc->max_attempts,NULL);
-#endif
-
 	/* bail out if we shouldn't be running event handlers */
 	if(enable_event_handlers==FALSE)
 		return OK;
@@ -248,10 +244,8 @@ int run_global_service_event_handler(service *svc){
 	char command_output[MAX_INPUT_BUFFER];
 	char temp_buffer[MAX_INPUT_BUFFER];
 	int early_timeout=FALSE;
-	double exectime=0.0;
-	int result=0;
-	struct timeval start_time;
-	struct timeval end_time;
+	double exectime;
+	int result;
 	int macro_options=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
 
 #ifdef DEBUG0
@@ -265,16 +259,6 @@ int run_global_service_event_handler(service *svc){
 	/* a global service event handler command has not been defined */
 	if(global_service_event_handler==NULL)
 		return ERROR;
-
-	/* get start time */
-	gettimeofday(&start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send event data to broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_event_handler(NEBTYPE_EVENTHANDLER_START,NEBFLAG_NONE,NEBATTR_NONE,GLOBAL_SERVICE_EVENTHANDLER,(void *)svc,svc->current_state,svc->state_type,start_time,end_time,exectime,event_handler_timeout,early_timeout,result,global_service_event_handler,NULL,NULL,NULL);
-#endif
 
 	/* get the raw command line */
 	get_raw_command_line(global_service_event_handler,raw_command_line,sizeof(raw_command_line),macro_options);
@@ -307,12 +291,9 @@ int run_global_service_event_handler(service *svc){
 		write_to_logs_and_console(temp_buffer,NSLOG_EVENT_HANDLER | NSLOG_RUNTIME_WARNING,TRUE);
 	        }
 
-	/* get end time */
-	gettimeofday(&end_time,NULL);
-
 #ifdef USE_EVENT_BROKER
 	/* send event data to broker */
-	broker_event_handler(NEBTYPE_EVENTHANDLER_END,NEBFLAG_NONE,NEBATTR_NONE,GLOBAL_SERVICE_EVENTHANDLER,(void *)svc,svc->current_state,svc->state_type,start_time,end_time,exectime,event_handler_timeout,early_timeout,result,global_service_event_handler,processed_command_line,command_output,NULL);
+	broker_event_handler(NEBTYPE_EVENTHANDLER_GLOBAL_SERVICE,NEBFLAG_NONE,NEBATTR_NONE,(void *)svc,svc->current_state,svc->state_type,exectime,event_handler_timeout,early_timeout,result,processed_command_line,command_output,NULL);
 #endif
 
 #ifdef DEBUG0
@@ -331,10 +312,8 @@ int run_service_event_handler(service *svc){
 	char command_output[MAX_INPUT_BUFFER];
 	char temp_buffer[MAX_INPUT_BUFFER];
 	int early_timeout=FALSE;
-	double exectime=0.0;
-	int result=0;
-	struct timeval start_time;
-	struct timeval end_time;
+	double exectime;
+	int result;
 	int macro_options=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
 
 #ifdef DEBUG0
@@ -344,16 +323,6 @@ int run_service_event_handler(service *svc){
 	/* bail if there's no command */
 	if(svc->event_handler==NULL)
 		return ERROR;
-
-	/* get start time */
-	gettimeofday(&start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send event data to broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_event_handler(NEBTYPE_EVENTHANDLER_START,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_EVENTHANDLER,(void *)svc,svc->current_state,svc->state_type,start_time,end_time,exectime,event_handler_timeout,early_timeout,result,svc->event_handler,NULL,NULL,NULL);
-#endif
 
 	/* get the raw command line */
 	get_raw_command_line(svc->event_handler,raw_command_line,sizeof(raw_command_line),macro_options);
@@ -386,12 +355,9 @@ int run_service_event_handler(service *svc){
 		write_to_logs_and_console(temp_buffer,NSLOG_EVENT_HANDLER | NSLOG_RUNTIME_WARNING,TRUE);
 	        }
 
-	/* get end time */
-	gettimeofday(&end_time,NULL);
-
 #ifdef USE_EVENT_BROKER
 	/* send event data to broker */
-	broker_event_handler(NEBTYPE_EVENTHANDLER_END,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_EVENTHANDLER,(void *)svc,svc->current_state,svc->state_type,start_time,end_time,exectime,event_handler_timeout,early_timeout,result,svc->event_handler,processed_command_line,command_output,NULL);
+	broker_event_handler(NEBTYPE_EVENTHANDLER_SERVICE,NEBFLAG_NONE,NEBATTR_NONE,(void *)svc,svc->current_state,svc->state_type,exectime,event_handler_timeout,early_timeout,result,processed_command_line,command_output,NULL);
 #endif
 
 #ifdef DEBUG0
@@ -414,11 +380,6 @@ int handle_host_event(host *hst){
 
 #ifdef DEBUG0
 	printf("handle_host_event() start\n");
-#endif
-
-#ifdef USE_EVENT_BROKER
-	/* send event data to broker */
-	broker_statechange_data(NEBTYPE_STATECHANGE_END,NEBFLAG_NONE,NEBATTR_NONE,HOST_STATECHANGE,(void *)hst,hst->current_state,hst->state_type,hst->current_attempt,hst->max_attempts,NULL);
 #endif
 
 	/* bail out if we shouldn't be running event handlers */
@@ -457,10 +418,8 @@ int run_global_host_event_handler(host *hst){
 	char command_output[MAX_INPUT_BUFFER];
 	char temp_buffer[MAX_INPUT_BUFFER];
 	int early_timeout=FALSE;
-	double exectime=0.0;
-	int result=0;
-	struct timeval start_time;
-	struct timeval end_time;
+	double exectime;
+	int result;
 	int macro_options=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
 
 #ifdef DEBUG0
@@ -474,16 +433,6 @@ int run_global_host_event_handler(host *hst){
 	/* no global host event handler command is defined */
 	if(global_host_event_handler==NULL)
 		return ERROR;
-
-	/* get start time */
-	gettimeofday(&start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send event data to broker */
-	end_time.tv_sec=0L;
-	end_time.tv_usec=0L;
-	broker_event_handler(NEBTYPE_EVENTHANDLER_START,NEBFLAG_NONE,NEBATTR_NONE,GLOBAL_HOST_EVENTHANDLER,(void *)hst,hst->current_state,hst->state_type,start_time,end_time,exectime,event_handler_timeout,early_timeout,result,global_host_event_handler,NULL,NULL,NULL);
-#endif
 
 	/* get the raw command line */
 	get_raw_command_line(global_host_event_handler,raw_command_line,sizeof(raw_command_line),macro_options);
@@ -516,12 +465,9 @@ int run_global_host_event_handler(host *hst){
 		write_to_logs_and_console(temp_buffer,NSLOG_EVENT_HANDLER | NSLOG_RUNTIME_WARNING,TRUE);
 	        }
 
-	/* get end time */
-	gettimeofday(&end_time,NULL);
-
 #ifdef USE_EVENT_BROKER
 	/* send event data to broker */
-	broker_event_handler(NEBTYPE_EVENTHANDLER_END,NEBFLAG_NONE,NEBATTR_NONE,GLOBAL_HOST_EVENTHANDLER,(void *)hst,hst->current_state,hst->state_type,start_time,end_time,exectime,event_handler_timeout,early_timeout,result,global_host_event_handler,processed_command_line,command_output,NULL);
+	broker_event_handler(NEBTYPE_EVENTHANDLER_GLOBAL_HOST,NEBFLAG_NONE,NEBATTR_NONE,(void *)hst,hst->current_state,hst->state_type,exectime,event_handler_timeout,early_timeout,result,processed_command_line,command_output,NULL);
 #endif
 
 #ifdef DEBUG0
@@ -539,10 +485,8 @@ int run_host_event_handler(host *hst){
 	char command_output[MAX_INPUT_BUFFER];
 	char temp_buffer[MAX_INPUT_BUFFER];
 	int early_timeout=FALSE;
-	double exectime=0.0;
-	int result=0;
-	struct timeval start_time;
-	struct timeval end_time;
+	double exectime;
+	int result;
 	int macro_options=STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS;
 
 #ifdef DEBUG0
@@ -552,14 +496,6 @@ int run_host_event_handler(host *hst){
 	/* bail if there's no command */
 	if(hst->event_handler==NULL)
 		return ERROR;
-
-	/* get start time */
-	gettimeofday(&start_time,NULL);
-
-#ifdef USE_EVENT_BROKER
-	/* send event data to broker */
-	broker_event_handler(NEBTYPE_EVENTHANDLER_START,NEBFLAG_NONE,NEBATTR_NONE,HOST_EVENTHANDLER,(void *)hst,hst->current_state,hst->state_type,start_time,end_time,exectime,event_handler_timeout,early_timeout,result,hst->event_handler,NULL,NULL,NULL);
-#endif
 
 	/* get the raw command line */
 	get_raw_command_line(hst->event_handler,raw_command_line,sizeof(raw_command_line),macro_options);
@@ -592,12 +528,9 @@ int run_host_event_handler(host *hst){
 		write_to_logs_and_console(temp_buffer,NSLOG_EVENT_HANDLER | NSLOG_RUNTIME_WARNING,TRUE);
 	        }
 
-	/* get end time */
-	gettimeofday(&end_time,NULL);
-
 #ifdef USE_EVENT_BROKER
 	/* send event data to broker */
-	broker_event_handler(NEBTYPE_EVENTHANDLER_END,NEBFLAG_NONE,NEBATTR_NONE,HOST_EVENTHANDLER,(void *)hst,hst->current_state,hst->state_type,start_time,end_time,exectime,event_handler_timeout,early_timeout,result,hst->event_handler,processed_command_line,command_output,NULL);
+	broker_event_handler(NEBTYPE_EVENTHANDLER_HOST,NEBFLAG_NONE,NEBATTR_NONE,(void *)hst,hst->current_state,hst->state_type,exectime,event_handler_timeout,early_timeout,result,processed_command_line,command_output,NULL);
 #endif
 
 #ifdef DEBUG0
@@ -649,7 +582,7 @@ int handle_host_state(host *hst){
 	        }
 
 	/* has the host state changed? */
-	if(hst->last_state!=hst->current_state || (hst->current_state==HOST_UP && hst->state_type==SOFT_STATE))
+	if(hst->last_state!=hst->current_state)
 		state_change=TRUE;
 
 	/* if the host state has changed... */
@@ -678,11 +611,8 @@ int handle_host_state(host *hst){
 		hst->no_more_notifications=FALSE;
 
 		/* the host just recovered, so reset the current host attempt */
-		/* 11/11/05 EG - moved below */
-		/*
 		if(hst->current_state==HOST_UP)
 			hst->current_attempt=1;
-		*/
 
 		/* write the host state change to the main log file */
 		if(hst->state_type==HARD_STATE || (hst->state_type==SOFT_STATE && log_host_retries==TRUE))
@@ -698,10 +628,6 @@ int handle_host_state(host *hst){
 
 		/* handle the host state change */
 		handle_host_event(hst);
-
-		/* the host just recovered, so reset the current host attempt */
-		if(hst->current_state==HOST_UP)
-			hst->current_attempt=1;
 
 		/* the host recovered, so reset the current notification number and state flags (after the recovery notification has gone out) */
 		if(hst->current_state==HOST_UP){

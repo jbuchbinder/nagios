@@ -2,14 +2,15 @@
  *
  * CONVERTCFG.C - Config File Convertor
  *
- * Copyright (c) 2001-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 08-12-2005
+ * Copyright (c) 2001-2002 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 12-10-2002
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,7 +50,7 @@ int main(int argc, char **argv){
 	if(argc!=3){
 		printf("Nagios Config File Converter\n");
 		printf("Written by Ethan Galstad (nagios@nagios.org)\n");
-		printf("Last Modified: 08-12-2005\n");
+		printf("Last Modified: 04-21-2002\n");
 		printf("\n");
 		printf("Usage: %s <config file> <object type>\n",argv[0]);
 		printf("\n");
@@ -85,10 +86,6 @@ int main(int argc, char **argv){
 		printf("\n");
 		printf("Please note that you can only specify one type of object at a time\n");
 		printf("on the command line.\n");
-		printf("\n");
-		printf("IMPORTANT: This utility will generate Nagios 1.x compliant config files.\n");
-		printf("However, the config files are not totally compatible with Nagios 2.x, so\n");
-		printf("you will have to do some manual tweaking.\n");
 		printf("\n");
 		return -1;
 	        }
@@ -604,7 +601,7 @@ int main(int argc, char **argv){
 				printf("%s%c",(y>0)?",":"",temp_ptr[y]);
 			if(y==0)
 				printf("n");
-			printf("\t; These are the criteria for which check execution will be suppressed\n");
+			printf("\t; These are the criteria for which check execution will be supressed\n");
 
 			temp_ptr=my_strsep(&temp_ptr2,";\r\n");
 
@@ -613,7 +610,7 @@ int main(int argc, char **argv){
 				printf("%s%c",(y>0)?",":"",temp_ptr[y]);
 			if(y==0)
 				printf("n");
-			printf("\t; These are the criteria for which notifications will be suppressed\n");
+			printf("\t; These are the criteria for which notifications will be supressed\n");
 			printf("\t}\n\n\n");
 		        }
 

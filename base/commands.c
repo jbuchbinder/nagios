@@ -3,13 +3,14 @@
  * COMMANDS.C - External command functions for Nagios
  *
  * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   12-14-2005
+ * Last Modified:   03-14-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -45,9 +46,6 @@ extern int      check_external_commands;
 extern int      ipc_pipe[2];
 
 extern time_t   last_command_check;
-extern time_t   last_command_status_update;
-
-extern int      command_check_interval;
 
 extern int      enable_notifications;
 extern int      execute_service_checks;
@@ -102,7 +100,6 @@ void check_for_external_commands(void){
 	time_t entry_time;
 	int command_type=CMD_NONE;
 	char *temp_ptr;
-	int update_status=FALSE;
 
 #ifdef DEBUG0
 	printf("check_for_external_commands() start\n");
@@ -117,15 +114,7 @@ void check_for_external_commands(void){
 	last_command_check=time(NULL);
 
 	/* update the status log with new program information */
-	/* go easy on the frequency of this if we're checking often - only update program status every 10 seconds.... */
-	if(last_command_check<(last_command_status_update+10))
-		update_status=FALSE;
-	else
-		update_status=TRUE;
-	if(update_status==TRUE){
-		last_command_status_update=last_command_check;
-		update_program_status(FALSE);
-	        }
+	update_program_status(FALSE);
 
 	/* reset passive check result list pointers */
 	passive_check_result_list=NULL;
@@ -571,19 +560,8 @@ void check_for_external_commands(void){
 				write_to_all_logs(buffer,NSLOG_EXTERNAL_COMMAND);
 		        }
 
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_external_command(NEBTYPE_EXTERNALCOMMAND_START,NEBFLAG_NONE,NEBATTR_NONE,command_type,entry_time,command_id,args,NULL);
-#endif
-
 		/* process the command if its not a passive check */
 		process_external_command(command_type,entry_time,args);
-
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_external_command(NEBTYPE_EXTERNALCOMMAND_END,NEBFLAG_NONE,NEBATTR_NONE,command_type,entry_time,command_id,args,NULL);
-#endif
-
 	        }
 
 	/**** PROCESS ALL PASSIVE SERVICE CHECK RESULTS AT ONE TIME ****/
@@ -2103,7 +2081,7 @@ int process_passive_host_check(time_t check_time, char *host_name, int return_co
 
 #ifdef USE_EVENT_BROKER
 	/* send data to event broker */
-	broker_host_check(NEBTYPE_HOSTCHECK_PROCESSED,NEBFLAG_NONE,NEBATTR_NONE,temp_host,HOST_CHECK_PASSIVE,temp_host->current_state,temp_host->state_type,tv,tv,NULL,0.0,temp_host->execution_time,0,FALSE,return_code,NULL,temp_host->plugin_output,temp_host->perf_data,NULL);
+	broker_host_check(NEBTYPE_HOSTCHECK_PROCESSED,NEBFLAG_NONE,NEBATTR_NONE,temp_host,HOST_CHECK_PASSIVE,temp_host->current_state,temp_host->state_type,tv,tv,0.0,temp_host->execution_time,0,FALSE,return_code,NULL,temp_host->plugin_output,temp_host->perf_data,NULL);
 #endif
 
 	/***** CHECK FOR FLAPPING *****/
@@ -2503,7 +2481,6 @@ int cmd_change_command(int cmd,char *args){
 	char *command_name="";
 	char *temp_ptr;
 	char *temp_ptr2;
-	unsigned long attr=MODATTR_NONE;
 
 #ifdef DEBUG0
 	printf("cmd_change_command() start\n");
@@ -2549,95 +2526,52 @@ int cmd_change_command(int cmd,char *args){
 		return ERROR;
 
 	/* make sure the command exists */
-	temp_ptr2=my_strtok(temp_ptr,"!");
+	temp_ptr2=my_strtok(command_name,"!");
 	temp_command=find_command(temp_ptr2);
 	if(temp_command==NULL)
-		return ERROR;
-
-	free(temp_ptr);
-	temp_ptr=strdup(command_name);
-	if(temp_ptr==NULL)
 		return ERROR;
 
 	switch(cmd){
 
 	case CMD_CHANGE_GLOBAL_HOST_EVENT_HANDLER:
+		free(global_host_event_handler);
+		global_host_event_handler=temp_ptr;
+		modified_host_process_attributes|=MODATTR_EVENT_HANDLER_COMMAND;
+		update_program_status(FALSE);
+		break;
+
 	case CMD_CHANGE_GLOBAL_SVC_EVENT_HANDLER:
-
-		if(cmd==CMD_CHANGE_GLOBAL_HOST_EVENT_HANDLER){
-			free(global_host_event_handler);
-			global_host_event_handler=temp_ptr;
-			attr=MODATTR_EVENT_HANDLER_COMMAND;
-			modified_host_process_attributes|=attr;
-
-#ifdef USE_EVENT_BROKER
-			/* send data to event broker */
-			broker_adaptive_program_data(NEBTYPE_ADAPTIVEPROGRAM_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,cmd,attr,modified_host_process_attributes,MODATTR_NONE,modified_service_process_attributes,global_host_event_handler,global_service_event_handler,NULL);
-#endif
-		        }
-		else{
-			free(global_service_event_handler);
-			global_service_event_handler=temp_ptr;
-			attr=MODATTR_EVENT_HANDLER_COMMAND;
-			modified_service_process_attributes|=attr;
-
-#ifdef USE_EVENT_BROKER
-			/* send data to event broker */
-			broker_adaptive_program_data(NEBTYPE_ADAPTIVEPROGRAM_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,cmd,MODATTR_NONE,modified_host_process_attributes,attr,modified_service_process_attributes,global_host_event_handler,global_service_event_handler,NULL);
-#endif
-		        }
-
-		/* update program status */
+		free(global_service_event_handler);
+		global_service_event_handler=temp_ptr;
+		modified_service_process_attributes|=MODATTR_EVENT_HANDLER_COMMAND;
 		update_program_status(FALSE);
 		break;
 
 	case CMD_CHANGE_HOST_EVENT_HANDLER:
+		free(temp_host->event_handler);
+		temp_host->event_handler=temp_ptr;
+		temp_host->modified_attributes|=MODATTR_EVENT_HANDLER_COMMAND;
+		update_host_status(temp_host,FALSE);
+		break;
+
 	case CMD_CHANGE_HOST_CHECK_COMMAND:
-
-		if(cmd==CMD_CHANGE_HOST_EVENT_HANDLER){
-			free(temp_host->event_handler);
-			temp_host->event_handler=temp_ptr;
-			attr=MODATTR_EVENT_HANDLER_COMMAND;
-		        }
-		else{
-			free(temp_host->host_check_command);
-			temp_host->host_check_command=temp_ptr;
-			attr=MODATTR_CHECK_COMMAND;
-		        }
-
-		temp_host->modified_attributes|=attr;
-
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_adaptive_host_data(NEBTYPE_ADAPTIVEHOST_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,temp_host,cmd,attr,temp_host->modified_attributes,NULL);
-#endif
-
-		/* update host status */
+		free(temp_host->host_check_command);
+		temp_host->host_check_command=temp_ptr;
+		temp_host->modified_attributes|=MODATTR_CHECK_COMMAND;
 		update_host_status(temp_host,FALSE);
 		break;
 
 	case CMD_CHANGE_SVC_EVENT_HANDLER:
+		free(temp_service->event_handler);
+		temp_service->event_handler=temp_ptr;
+		temp_service->modified_attributes|=MODATTR_EVENT_HANDLER_COMMAND;
+		update_service_status(temp_service,FALSE);
+		break;
+
 	case CMD_CHANGE_SVC_CHECK_COMMAND:
-
-		if(cmd==CMD_CHANGE_SVC_EVENT_HANDLER){
-			free(temp_service->event_handler);
-			temp_service->event_handler=temp_ptr;
-			attr=MODATTR_EVENT_HANDLER_COMMAND;
-		        }
-		else{
-			free(temp_service->service_check_command);
-			temp_service->service_check_command=temp_ptr;
-			attr=MODATTR_CHECK_COMMAND;
-		        }
-
-		temp_service->modified_attributes|=attr;
-
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_adaptive_service_data(NEBTYPE_ADAPTIVESERVICE_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,temp_service,cmd,attr,temp_service->modified_attributes,NULL);
-#endif
-
-		/* update service status */
+		free(temp_service->service_check_command);
+		temp_service->service_check_command=temp_ptr;
+		temp_service->modified_attributes|=MODATTR_CHECK_COMMAND;
 		update_service_status(temp_service,FALSE);
 		break;
 
@@ -2665,7 +2599,6 @@ int cmd_change_check_interval(int cmd,char *args){
 	int old_interval;
 	time_t preferred_time;
 	time_t next_valid_time;
-	unsigned long attr;
 
 #ifdef DEBUG0
 	printf("cmd_change_check_interval() start\n");
@@ -2713,8 +2646,7 @@ int cmd_change_check_interval(int cmd,char *args){
 
 		/* modify the check interval */
 		temp_host->check_interval=interval;
-		attr=MODATTR_NORMAL_CHECK_INTERVAL;
-		temp_host->modified_attributes|=attr;
+		temp_host->modified_attributes|=MODATTR_NORMAL_CHECK_INTERVAL;
 
 		/* schedule a host check if previous interval was 0 (checks were not regularly scheduled) */
 		if(old_interval==0 && temp_host->checks_enabled==TRUE){
@@ -2734,15 +2666,11 @@ int cmd_change_check_interval(int cmd,char *args){
 			/* schedule a check if we should */
 			if(temp_host->should_be_scheduled==TRUE)
 				schedule_host_check(temp_host,temp_host->next_check,FALSE);
+
+			/* update the status log with the host info */
+			update_host_status(temp_host,FALSE);
 		        }
 
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_adaptive_host_data(NEBTYPE_ADAPTIVEHOST_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,temp_host,cmd,attr,temp_host->modified_attributes,NULL);
-#endif
-
-		/* update the status log with the host info */
-		update_host_status(temp_host,FALSE);
 		break;
 
 	case CMD_CHANGE_NORMAL_SVC_CHECK_INTERVAL:
@@ -2752,11 +2680,10 @@ int cmd_change_check_interval(int cmd,char *args){
 
 		/* modify the check interval */
 		temp_service->check_interval=interval;
-		attr=MODATTR_NORMAL_CHECK_INTERVAL;
-		temp_service->modified_attributes|=attr;
+		temp_service->modified_attributes|=MODATTR_NORMAL_CHECK_INTERVAL;
 
 		/* schedule a service check if previous interval was 0 (checks were not regularly scheduled) */
-		if(old_interval==0 && temp_service->checks_enabled==TRUE && temp_service->check_interval!=0){
+		if(old_interval==0 && temp_service->checks_enabled==TRUE){
 
 			/* set the service check flag */
 			temp_service->should_be_scheduled=TRUE;
@@ -2773,30 +2700,16 @@ int cmd_change_check_interval(int cmd,char *args){
 			/* schedule a check if we should */
 			if(temp_service->should_be_scheduled==TRUE)
 				schedule_service_check(temp_service,temp_service->next_check,FALSE);
+
+			/* update the status log with the service info */
+			update_service_status(temp_service,FALSE);
 		        }
 
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_adaptive_service_data(NEBTYPE_ADAPTIVESERVICE_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,temp_service,cmd,attr,temp_service->modified_attributes,NULL);
-#endif
-
-		/* update the status log with the service info */
-		update_service_status(temp_service,FALSE);
 		break;
 
 	case CMD_CHANGE_RETRY_SVC_CHECK_INTERVAL:
-
 		temp_service->retry_interval=interval;
-		attr=MODATTR_RETRY_CHECK_INTERVAL;
-		temp_service->modified_attributes|=attr;
-
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_adaptive_service_data(NEBTYPE_ADAPTIVESERVICE_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,temp_service,cmd,attr,temp_service->modified_attributes,NULL);
-#endif
-
-		/* update the status log with the service info */
-		update_service_status(temp_service,FALSE);
+		temp_service->modified_attributes|=MODATTR_RETRY_CHECK_INTERVAL;
 		break;
 
 	default:
@@ -2819,7 +2732,6 @@ int cmd_change_max_attempts(int cmd,char *args){
 	char *svc_description="";
 	char *temp_ptr;
 	int max_attempts;
-	unsigned long attr;
 
 #ifdef DEBUG0
 	printf("cmd_change_max_attempts() start\n");
@@ -2861,40 +2773,24 @@ int cmd_change_max_attempts(int cmd,char *args){
 	switch(cmd){
 
 	case CMD_CHANGE_MAX_HOST_CHECK_ATTEMPTS:
-
 		temp_host->max_attempts=max_attempts;
-		attr=MODATTR_MAX_CHECK_ATTEMPTS;
-		temp_host->modified_attributes|=attr;
+		temp_host->modified_attributes|=MODATTR_MAX_CHECK_ATTEMPTS;
 
 		/* adjust current attempt number if in a hard state */
 		if(temp_host->state_type==HARD_STATE && temp_host->current_state!=HOST_UP && temp_host->current_attempt>1)
 			temp_host->current_attempt=temp_host->max_attempts;
 
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_adaptive_host_data(NEBTYPE_ADAPTIVEHOST_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,temp_host,cmd,attr,temp_host->modified_attributes,NULL);
-#endif
-
-		/* update host status info */
 		update_host_status(temp_host,FALSE);
 		break;
 
 	case CMD_CHANGE_MAX_SVC_CHECK_ATTEMPTS:
-
 		temp_service->max_attempts=max_attempts;
-		attr=MODATTR_MAX_CHECK_ATTEMPTS;
-		temp_service->modified_attributes|=attr;
+		temp_service->modified_attributes|=MODATTR_MAX_CHECK_ATTEMPTS;
 
 		/* adjust current attempt number if in a hard state */
 		if(temp_service->state_type==HARD_STATE && temp_service->current_state!=STATE_OK && temp_service->current_attempt>1)
 			temp_service->current_attempt=temp_service->max_attempts;
 
-#ifdef USE_EVENT_BROKER
-		/* send data to event broker */
-		broker_adaptive_service_data(NEBTYPE_ADAPTIVESERVICE_UPDATE,NEBFLAG_NONE,NEBATTR_NONE,temp_service,cmd,attr,temp_service->modified_attributes,NULL);
-#endif
-
-		/* update service status info */
 		update_service_status(temp_service,FALSE);
 		break;
 
@@ -3288,15 +3184,6 @@ void acknowledge_host_problem(host *hst, char *ack_author, char *ack_data, int t
 	printf("acknowledge_host_problem() start\n");
 #endif
 
-	/* cannot acknowledge a non-existent problem */
-	if(hst->current_state==HOST_UP)
-		return;
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_acknowledgement_data(NEBTYPE_ACKNOWLEDGEMENT_ADD,NEBFLAG_NONE,NEBATTR_NONE,HOST_ACKNOWLEDGEMENT,(void *)hst,ack_author,ack_data,type,notify,persistent,NULL);
-#endif
-
 	/* send out an acknowledgement notification */
 	if(notify==TRUE)
 		host_notification(hst,NOTIFICATION_ACKNOWLEDGEMENT,ack_author,ack_data);
@@ -3328,15 +3215,6 @@ void acknowledge_service_problem(service *svc, char *ack_author, char *ack_data,
 
 #ifdef DEBUG0
 	printf("acknowledge_service_problem() start\n");
-#endif
-
-	/* cannot acknowledge a non-existent problem */
-	if(svc->current_state==STATE_OK)
-		return;
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_acknowledgement_data(NEBTYPE_ACKNOWLEDGEMENT_ADD,NEBFLAG_NONE,NEBATTR_NONE,SERVICE_ACKNOWLEDGEMENT,(void *)svc,ack_author,ack_data,type,notify,persistent,NULL);
 #endif
 
 	/* send out an acknowledgement notification */

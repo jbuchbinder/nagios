@@ -2,14 +2,15 @@
  *
  * STATUSWML.C -  Nagios Status CGI for WAP-enabled devices
  *
- * Copyright (c) 2001-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 12-01-2005
+ * Copyright (c) 2001-2003 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 08-14-2003
  *
  * License:
  * 
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -1396,6 +1397,8 @@ void display_problems(void){
 		if(display_type==DISPLAY_UNHANDLED_PROBLEMS){
 			if(temp_hoststatus->problem_has_been_acknowledged==TRUE)
 				continue;
+			if(temp_hoststatus->checks_enabled==FALSE)
+				continue;
 			if(temp_hoststatus->notifications_enabled==FALSE)
 				continue;
 			if(temp_hoststatus->scheduled_downtime_depth>0)
@@ -1442,6 +1445,8 @@ void display_problems(void){
 
 		if(display_type==DISPLAY_UNHANDLED_PROBLEMS){
 			if(temp_servicestatus->problem_has_been_acknowledged==TRUE)
+				continue;
+			if(temp_servicestatus->checks_enabled==FALSE)
 				continue;
 			if(temp_servicestatus->notifications_enabled==FALSE)
 				continue;

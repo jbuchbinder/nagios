@@ -2,14 +2,15 @@
  *
  * PERFDATA.H - Include file for performance data routines
  *
- * Copyright (c) 2001-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   11-25-2005
+ * Copyright (c) 2001-2003 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   08-14-2003
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,11 +26,7 @@
 #ifndef _PERFDATA_H
 #define _PERFDATA_H
 
-#include "objects.h"
-
-#ifdef __cplusplus
-  extern "C" {
-#endif
+#include "../include/objects.h"
 
 int initialize_performance_data(char *);	                /* initializes performance data */
 int cleanup_performance_data(char *);                           /* cleans up performance data */
@@ -37,8 +34,7 @@ int cleanup_performance_data(char *);                           /* cleans up per
 int update_host_performance_data(host *);       	        /* updates host performance data */
 int update_service_performance_data(service *);         	/* updates service performance data */
 
-#ifdef __cplusplus
-  }
-#endif
 
 #endif
+
+

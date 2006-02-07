@@ -3,13 +3,14 @@
  * XSDDEFAULT.C - Default external status data input routines for Nagios
  *
  * Copyright (c) 2000-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified:   11-25-2005
+ * Last Modified:   01-04-2005
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -289,7 +290,6 @@ int xsddefault_cleanup_status_data(char *config_file, int delete_status_data){
 
 /* write all status data to file */
 int xsddefault_save_status_data(void){
-	char temp_buffer[MAX_INPUT_BUFFER];
 	host *temp_host;
 	service *temp_service;
 	time_t current_time;
@@ -299,26 +299,12 @@ int xsddefault_save_status_data(void){
 	/* open a safe temp file for output */
 	snprintf(xsddefault_aggregate_temp_file,sizeof(xsddefault_aggregate_temp_file)-1,"%sXXXXXX",xsddefault_temp_file);
 	xsddefault_aggregate_temp_file[sizeof(xsddefault_aggregate_temp_file)-1]='\x0';
-	if((fd=mkstemp(xsddefault_aggregate_temp_file))==-1){
-
-		/* log an error */
-		snprintf(temp_buffer,sizeof(temp_buffer),"Error: Unable to create temp file for writing status data!\n");
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_ERROR,TRUE);
-
+	if((fd=mkstemp(xsddefault_aggregate_temp_file))==-1)
 		return ERROR;
-	        }
 	fp=fdopen(fd,"w");
 	if(fp==NULL){
-
 		close(fd);
 		unlink(xsddefault_aggregate_temp_file);
-
-		/* log an error */
-		snprintf(temp_buffer,sizeof(temp_buffer),"Error: Unable to open temp file '%s' for writing status data!\n",xsddefault_aggregate_temp_file);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_ERROR,TRUE);
-
 		return ERROR;
 	        }
 
@@ -355,7 +341,7 @@ int xsddefault_save_status_data(void){
 	fprintf(fp,"\tenable_event_handlers=%d\n",enable_event_handlers);
 	fprintf(fp,"\tobsess_over_services=%d\n",obsess_over_services);
 	fprintf(fp,"\tobsess_over_hosts=%d\n",obsess_over_hosts);
-	fprintf(fp,"\tcheck_service_freshness=%d\n",check_service_freshness);
+	fprintf(fp,"\tcheck_service_freshness=%d\n",check_host_freshness);
 	fprintf(fp,"\tcheck_host_freshness=%d\n",check_host_freshness);
 	fprintf(fp,"\tenable_flap_detection=%d\n",enable_flap_detection);
 	fprintf(fp,"\tenable_failure_prediction=%d\n",enable_failure_prediction);
@@ -377,9 +363,9 @@ int xsddefault_save_status_data(void){
 		fprintf(fp,"\tshould_be_scheduled=%d\n",temp_host->should_be_scheduled);
 		fprintf(fp,"\tcheck_execution_time=%.3f\n",temp_host->execution_time);
 		fprintf(fp,"\tcheck_latency=%.3f\n",temp_host->latency);
-		fprintf(fp,"\tcheck_type=%d\n",temp_host->check_type);
 		fprintf(fp,"\tcurrent_state=%d\n",temp_host->current_state);
 		fprintf(fp,"\tlast_hard_state=%d\n",temp_host->last_hard_state);
+		fprintf(fp,"\tcheck_type=%d\n",temp_host->check_type);
 		fprintf(fp,"\tplugin_output=%s\n",(temp_host->plugin_output==NULL)?"":temp_host->plugin_output);
 		fprintf(fp,"\tperformance_data=%s\n",(temp_host->perf_data==NULL)?"":temp_host->perf_data);
 		fprintf(fp,"\tlast_check=%lu\n",temp_host->last_check);
@@ -432,7 +418,6 @@ int xsddefault_save_status_data(void){
 		fprintf(fp,"\tshould_be_scheduled=%d\n",temp_service->should_be_scheduled);
 		fprintf(fp,"\tcheck_execution_time=%.3f\n",temp_service->execution_time);
 		fprintf(fp,"\tcheck_latency=%.3f\n",temp_service->latency);
-		fprintf(fp,"\tcheck_type=%d\n",temp_service->check_type);
 		fprintf(fp,"\tcurrent_state=%d\n",temp_service->current_state);
 		fprintf(fp,"\tlast_hard_state=%d\n",temp_service->last_hard_state);
 		fprintf(fp,"\tcurrent_attempt=%d\n",temp_service->current_attempt);
@@ -448,6 +433,7 @@ int xsddefault_save_status_data(void){
 		fprintf(fp,"\tperformance_data=%s\n",(temp_service->perf_data==NULL)?"":temp_service->perf_data);
 		fprintf(fp,"\tlast_check=%lu\n",temp_service->last_check);
 		fprintf(fp,"\tnext_check=%lu\n",temp_service->next_check);
+		fprintf(fp,"\tcheck_type=%d\n",temp_service->check_type);
 		fprintf(fp,"\tcurrent_notification_number=%d\n",temp_service->current_notification_number);
 		fprintf(fp,"\tlast_notification=%lu\n",temp_service->last_notification);
 		fprintf(fp,"\tnext_notification=%lu\n",temp_service->next_notification);
@@ -483,15 +469,8 @@ int xsddefault_save_status_data(void){
 	fclose(fp);
 
 	/* move the temp file to the status log (overwrite the old status log) */
-	if(my_rename(xsddefault_aggregate_temp_file,xsddefault_status_log)){
-
-		/* log an error */
-		snprintf(temp_buffer,sizeof(temp_buffer),"Error: Unable to update status data file '%s'!\n",xsddefault_status_log);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		write_to_logs_and_console(temp_buffer,NSLOG_RUNTIME_ERROR,TRUE);
-
+	if(my_rename(xsddefault_aggregate_temp_file,xsddefault_status_log))
 		return ERROR;
-	        }
 
 	return OK;
         }
@@ -636,7 +615,7 @@ int xsddefault_read_status_data(char *config_file,int options){
 				else if(!strcmp(var,"check_service_freshness"))
 					check_service_freshness=(atoi(val)>0)?TRUE:FALSE;
 				else if(!strcmp(var,"check_host_freshness"))
-					check_host_freshness=(atoi(val)>0)?TRUE:FALSE;
+					obsess_over_hosts=(atoi(val)>0)?TRUE:FALSE;
 				else if(!strcmp(var,"enable_flap_detection"))
 					enable_flap_detection=(atoi(val)>0)?TRUE:FALSE;
 				else if(!strcmp(var,"enable_failure_prediction"))
@@ -658,8 +637,6 @@ int xsddefault_read_status_data(char *config_file,int options){
 						temp_hoststatus->execution_time=strtod(val,NULL);
 					else if(!strcmp(var,"check_latency"))
 						temp_hoststatus->latency=strtod(val,NULL);
-					else if(!strcmp(var,"check_type"))
-						temp_hoststatus->check_type=atoi(val);
 					else if(!strcmp(var,"current_state"))
 						temp_hoststatus->status=atoi(val);
 					else if(!strcmp(var,"last_hard_state"))
@@ -676,6 +653,8 @@ int xsddefault_read_status_data(char *config_file,int options){
 						temp_hoststatus->last_check=strtoul(val,NULL,10);
 					else if(!strcmp(var,"next_check"))
 						temp_hoststatus->next_check=strtoul(val,NULL,10);
+					else if(!strcmp(var,"check_type"))
+						temp_hoststatus->check_type=atoi(val);
 					else if(!strcmp(var,"current_attempt"))
 						temp_hoststatus->current_attempt=(atoi(val)>0)?TRUE:FALSE;
 					else if(!strcmp(var,"state_type"))
@@ -752,8 +731,6 @@ int xsddefault_read_status_data(char *config_file,int options){
 						temp_servicestatus->execution_time=strtod(val,NULL);
 					else if(!strcmp(var,"check_latency"))
 						temp_servicestatus->latency=strtod(val,NULL);
-					else if(!strcmp(var,"check_type"))
-						temp_servicestatus->check_type=atoi(val);
 					else if(!strcmp(var,"current_state"))
 						temp_servicestatus->status=atoi(val);
 					else if(!strcmp(var,"last_hard_state"))
@@ -784,6 +761,8 @@ int xsddefault_read_status_data(char *config_file,int options){
 						temp_servicestatus->last_check=strtoul(val,NULL,10);
 					else if(!strcmp(var,"next_check"))
 						temp_servicestatus->next_check=strtoul(val,NULL,10);
+					else if(!strcmp(var,"check_type"))
+						temp_servicestatus->check_type=atoi(val);
 					else if(!strcmp(var,"current_notification_number"))
 						temp_servicestatus->current_notification_number=atoi(val);
 					else if(!strcmp(var,"last_notification"))

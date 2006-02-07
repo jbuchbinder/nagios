@@ -8,8 +8,9 @@
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,7 +31,6 @@
 #include "../include/statusdata.h"
 #include "../include/nagios.h"
 #include "../include/sretention.h"
-#include "../include/broker.h"
 
 extern int            retain_state_information;
 
@@ -54,7 +54,6 @@ extern int            retain_state_information;
 /* save all host and service state information */
 int save_state_information(char *main_config_file, int autosave){
 	char buffer[MAX_INPUT_BUFFER];
-	int result=OK;
 
 #ifdef DEBUG0
 	printf("save_state_information() start\n");
@@ -63,23 +62,11 @@ int save_state_information(char *main_config_file, int autosave){
 	if(retain_state_information==FALSE)
 		return OK;
 
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_retention_data(NEBTYPE_RETENTIONDATA_STARTSAVE,NEBFLAG_NONE,NEBATTR_NONE,NULL);
-#endif
-
 	/********* IMPLEMENTATION-SPECIFIC OUTPUT FUNCTION ********/
 #ifdef USE_XRDDEFAULT
-	result=xrddefault_save_state_information(main_config_file);
-#endif
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_retention_data(NEBTYPE_RETENTIONDATA_ENDSAVE,NEBFLAG_NONE,NEBATTR_NONE,NULL);
-#endif
-
-	if(result==ERROR)
+	if(xrddefault_save_state_information(main_config_file)==ERROR)
 		return ERROR;
+#endif
 
 	if(autosave==TRUE){
 		snprintf(buffer,sizeof(buffer),"Auto-save of retention data completed successfully.\n");
@@ -99,7 +86,6 @@ int save_state_information(char *main_config_file, int autosave){
 
 /* reads in initial host and state information */
 int read_initial_state_information(char *main_config_file){
-	int result=OK;
 
 #ifdef DEBUG0
 	printf("read_initial_state_information() start\n");
@@ -108,23 +94,11 @@ int read_initial_state_information(char *main_config_file){
 	if(retain_state_information==FALSE)
 		return OK;
 
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_retention_data(NEBTYPE_RETENTIONDATA_STARTLOAD,NEBFLAG_NONE,NEBATTR_NONE,NULL);
-#endif
-
 	/********* IMPLEMENTATION-SPECIFIC INPUT FUNCTION ********/
 #ifdef USE_XRDDEFAULT
-	result=xrddefault_read_state_information(main_config_file);
-#endif
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	broker_retention_data(NEBTYPE_RETENTIONDATA_ENDLOAD,NEBFLAG_NONE,NEBATTR_NONE,NULL);
-#endif
-
-	if(result==ERROR)
+	if(xrddefault_read_state_information(main_config_file)==ERROR)
 		return ERROR;
+#endif
 
 #ifdef DEBUG0
 	printf("read_initial_state_information() end\n");

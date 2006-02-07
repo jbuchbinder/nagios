@@ -2,14 +2,15 @@
  *
  * NEBSTRUCTS.H - Event broker includes for Nagios
  *
- * Copyright (c) 2003-2005 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 12-17-2005
+ * Copyright (c) 2003-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 09-30-2004
  *
  * License:
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,9 +30,7 @@
 #include "objects.h"
 #include "nagios.h"
 
-#ifdef __cplusplus
-  extern "C" {
-#endif
+
 
 /****** STRUCTURES *************************/
 
@@ -65,7 +64,6 @@ typedef struct nebstruct_log_struct{
 	int             attr;
 	struct timeval  timestamp;
 
-	time_t          entry_time;
 	int             data_type;
 	char            *data;
         }nebstruct_log_data;
@@ -78,8 +76,6 @@ typedef struct nebstruct_system_command_struct{
 	int             attr;
 	struct timeval  timestamp;
 
-	struct timeval  start_time;
-	struct timeval  end_time;
 	int             timeout;
 	char            *command_line;
 	int             early_timeout;
@@ -96,17 +92,12 @@ typedef struct nebstruct_event_handler_struct{
 	int             attr;
 	struct timeval  timestamp;
 
-	int             eventhandler_type;
 	char            *host_name;
 	char            *service_description;
 	int             state_type;
 	int             state;
 	int             timeout;
-	char            *command_name;
-	char            *command_args;
 	char            *command_line;
-	struct timeval  start_time;
-	struct timeval  end_time;
 	int             early_timeout;
 	double          execution_time;
 	int             return_code;
@@ -128,8 +119,6 @@ typedef struct nebstruct_host_check_struct{
 	int             state_type;
 	int             state;
 	int             timeout;
-	char            *command_name;
-	char            *command_args;
 	char            *command_line;
 	struct timeval  start_time;
 	struct timeval  end_time;
@@ -157,8 +146,6 @@ typedef struct nebstruct_service_check_struct{
 	int             state_type;
 	int             state;
 	int             timeout;
-	char            *command_name;
-	char            *command_args;
 	char            *command_line;
 	struct timeval  start_time;
 	struct timeval  end_time;
@@ -226,8 +213,7 @@ typedef struct nebstruct_flapping_struct{
 	char            *host_name;
 	char            *service_description;
 	double          percent_change;
-	double          high_threshold;
-	double          low_threshold;
+	double          threshold;
 	unsigned long   comment_id;
         }nebstruct_flapping_data;
 
@@ -255,10 +241,6 @@ typedef struct nebstruct_program_status_struct{
 	int             process_performance_data;
 	int             obsess_over_hosts;
 	int             obsess_over_services;
-	unsigned long   modified_host_attributes;
-	unsigned long   modified_service_attributes;
-	char            *global_host_event_handler;
-	char            *global_service_event_handler;
         }nebstruct_program_status_data;
 
 
@@ -292,8 +274,6 @@ typedef struct nebstruct_notification_struct{
 	struct timeval  timestamp;
 
 	int             notification_type;
-	struct timeval  start_time;
-	struct timeval  end_time;
 	char            *host_name;
 	char            *service_description;
 	int             reason_type;
@@ -301,174 +281,8 @@ typedef struct nebstruct_notification_struct{
 	char            *output;
 	char            *ack_author;
 	char            *ack_data;
-	int             escalated;
 	int             contacts_notified;
         }nebstruct_notification_data;
 
-
-/* contact notification data structure */
-typedef struct nebstruct_contact_notification_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-	int             notification_type;
-	struct timeval  start_time;
-	struct timeval  end_time;
-	char            *host_name;
-	char            *service_description;
-	char            *contact_name;
-	int             reason_type;
-	int             state;
-	char            *output;
-	char            *ack_author;
-	char            *ack_data;
-	int             escalated;
-        }nebstruct_contact_notification_data;
-
-
-/* contact notification method data structure */
-typedef struct nebstruct_contact_notification_method_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-	int             notification_type;
-	struct timeval  start_time;
-	struct timeval  end_time;
-	char            *host_name;
-	char            *service_description;
-	char            *contact_name;
-	char            *command_name;
-	char            *command_args;
-	int             reason_type;
-	int             state;
-	char            *output;
-	char            *ack_author;
-	char            *ack_data;
-	int             escalated;
-        }nebstruct_contact_notification_method_data;
-
-
-/* adaptive program data structure */
-typedef struct nebstruct_adaptive_program_data_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-	int             command_type;
-	unsigned long   modified_host_attribute;
-	unsigned long   modified_host_attributes;
-	unsigned long   modified_service_attribute;
-	unsigned long   modified_service_attributes;
-	char            *global_host_event_handler;
-	char            *global_service_event_handler;
-        }nebstruct_adaptive_program_data;
-
-
-/* adaptive host data structure */
-typedef struct nebstruct_adaptive_host_data_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-	int             command_type;
-	unsigned long   modified_attribute;
-	unsigned long   modified_attributes;
-	void            *object_ptr;
-        }nebstruct_adaptive_host_data;
-
-
-/* adaptive service data structure */
-typedef struct nebstruct_adaptive_service_data_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-	int             command_type;
-	unsigned long   modified_attribute;
-	unsigned long   modified_attributes;
-	void            *object_ptr;
-        }nebstruct_adaptive_service_data;
-
-
-/* external command data structure */
-typedef struct nebstruct_external_command_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-	int             command_type;
-	time_t          entry_time;
-	char            *command_string;
-	char            *command_args;
-        }nebstruct_external_command_data;
-
-
-/* aggregated status data structure */
-typedef struct nebstruct_aggregated_status_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-        }nebstruct_aggregated_status_data;
-
-
-/* retention data structure */
-typedef struct nebstruct_retention_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-        }nebstruct_retention_data;
-
-
-/* acknowledgement structure */
-typedef struct nebstruct_acknowledgement_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-	int             acknowledgement_type;
-	char            *host_name;
-	char            *service_description;
-	int             state;
-	char            *author_name;
-	char            *comment_data;
-	int             is_sticky;
-	int             persistent_comment;
-	int             notify_contacts;
-        }nebstruct_acknowledgement_data;
-
-
-/* state change structure */
-typedef struct nebstruct_statechange_struct{
-	int             type;
-	int             flags;
-	int             attr;
-	struct timeval  timestamp;
-
-	int             statechange_type;
-	char            *host_name;
-	char            *service_description;
-	int             state;
-	int             state_type;
-	int             current_attempt;
-	int             max_attempts;
-	char            *output;
-        }nebstruct_statechange_data;
-
-#ifdef __cplusplus
-  }
-#endif
 
 #endif

@@ -2,14 +2,15 @@
  *
  * HISTOGRAM.C -  Nagios Alert Histogram CGI
  *
- * Copyright (c) 2001-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 01-20-2006
+ * Copyright (c) 2001-2004 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 11-05-2004
  *
  * License:
  * 
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -341,18 +342,14 @@ int main(int argc, char **argv){
 			printf("<TR><TD CLASS='linkBox'>\n");
 
 			if(display_type==DISPLAY_HOST_HISTOGRAM){
-#ifdef USE_TRENDS
 				printf("<a href='%s?host=%s&t1=%lu&t2=%lu&assumestateretention=%s'>View Trends For This Host</a><BR>\n",TRENDS_CGI,url_encode(host_name),t1,t2,(assume_state_retention==TRUE)?"yes":"no");
-#endif
 				printf("<a href='%s?host=%s&t1=%lu&t2=%lu&assumestateretention=%s&show_log_entries'>View Availability Report For This Host</a><BR>\n",AVAIL_CGI,url_encode(host_name),t1,t2,(assume_state_retention==TRUE)?"yes":"no");
 				printf("<a href='%s?host=%s'>View Status Detail For This Host</a><BR>\n",STATUS_CGI,url_encode(host_name));
 				printf("<a href='%s?host=%s'>View History For This Host</a><BR>\n",HISTORY_CGI,url_encode(host_name));
 				printf("<a href='%s?host=%s'>View Notifications For This Host</a><BR>\n",NOTIFICATIONS_CGI,url_encode(host_name));
 		                }
 			else{
-#ifdef USE_TRENDS
 				printf("<a href='%s?host=%s",TRENDS_CGI,url_encode(host_name));
-#endif
 				printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s'>View Trends For This Service</a><BR>\n",url_encode(svc_description),t1,t2,(assume_state_retention==TRUE)?"yes":"no");
 				printf("<a href='%s?host=%s",AVAIL_CGI,url_encode(host_name));
 				printf("&service=%s&t1=%lu&t2=%lu&assumestateretention=%s&show_log_entries'>View Availability Report For This Service</a><BR>\n",url_encode(svc_description),t1,t2,(assume_state_retention==TRUE)?"yes":"no");
@@ -1652,7 +1649,7 @@ void graph_all_histogram_data(void){
 			snprintf(temp_buffer,sizeof(temp_buffer)-1,"%d",(int)(current_unit*y_units));
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			string_width=gdFontSmall->w*strlen(temp_buffer);
-			gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET-string_width-5,DRAWING_Y_OFFSET-(current_unit*y_units*y_scaling_factor)-(string_height/2),(unsigned char *)temp_buffer,color_black);
+			gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET-string_width-5,DRAWING_Y_OFFSET-(current_unit*y_units*y_scaling_factor)-(string_height/2),temp_buffer,color_black);
 	                }
 	        }
 
@@ -1674,14 +1671,14 @@ void graph_all_histogram_data(void){
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		string_width=gdFontSmall->w*strlen(temp_buffer);
 
-		gdImageStringUp(histogram_image,gdFontSmall,DRAWING_X_OFFSET+(current_unit*x_units)-(string_height/2),DRAWING_Y_OFFSET+5+string_width,(unsigned char *)temp_buffer,color_black);
+		gdImageStringUp(histogram_image,gdFontSmall,DRAWING_X_OFFSET+(current_unit*x_units)-(string_height/2),DRAWING_Y_OFFSET+5+string_width,temp_buffer,color_black);
 	        }
 
 	/* draw y unit measure */
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"Number of Events");
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageStringUp(histogram_image,gdFontSmall,0,DRAWING_Y_OFFSET-(DRAWING_HEIGHT/2)+(string_width/2),(unsigned char *)temp_buffer,color_black);
+	gdImageStringUp(histogram_image,gdFontSmall,0,DRAWING_Y_OFFSET-(DRAWING_HEIGHT/2)+(string_width/2),temp_buffer,color_black);
 
 	/* draw x unit measure */
 	if(breakdown_type==BREAKDOWN_MONTHLY)
@@ -1694,7 +1691,7 @@ void graph_all_histogram_data(void){
 		snprintf(temp_buffer,sizeof(temp_buffer)-1,"Hour of the Day (15 minute increments)");
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+(DRAWING_WIDTH/2)-(string_width/2),DRAWING_Y_OFFSET+70,(unsigned char *)temp_buffer,color_black);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+(DRAWING_WIDTH/2)-(string_width/2),DRAWING_Y_OFFSET+70,temp_buffer,color_black);
 
 	/* draw title */
 	snprintf(start_time,sizeof(start_time)-1,"%s",ctime(&t1));
@@ -1968,60 +1965,60 @@ void graph_all_histogram_data(void){
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"EVENT TYPE");
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT,(unsigned char *)temp_buffer,color_black);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT,temp_buffer,color_black);
 
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"  MIN   MAX   SUM   AVG");
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT,(unsigned char *)temp_buffer,color_black);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT,temp_buffer,color_black);
 
 	draw_line(DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+string_height+2,DRAWING_X_OFFSET+DRAWING_WIDTH+275,DRAWING_Y_OFFSET-DRAWING_HEIGHT+string_height+2,color_black);
 
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"Recovery (%s):",(display_type==DISPLAY_SERVICE_HISTOGRAM)?"Ok":"Up");
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*1),(unsigned char *)temp_buffer,color_green);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*1),temp_buffer,color_green);
 
 	state1_avg=(double)((double)state1_sum/(double)total_buckets);
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"%5lu %5lu %5lu   %.2f",state1_min,state1_max,state1_sum,state1_avg);
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*1),(unsigned char *)temp_buffer,color_black);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*1),temp_buffer,color_black);
 
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"%s:",(display_type==DISPLAY_SERVICE_HISTOGRAM)?"Warning":"Down");
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*2),(unsigned char *)temp_buffer,(display_type==DISPLAY_SERVICE_HISTOGRAM)?color_yellow:color_red);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*2),temp_buffer,(display_type==DISPLAY_SERVICE_HISTOGRAM)?color_yellow:color_red);
 
 	state2_avg=(double)((double)state2_sum/(double)total_buckets);
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"%5lu %5lu %5lu   %.2f",state2_min,state2_max,state2_sum,state2_avg);
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*2),(unsigned char *)temp_buffer,color_black);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*2),temp_buffer,color_black);
 
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"%s:",(display_type==DISPLAY_SERVICE_HISTOGRAM)?"Unknown":"Unreachable");
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*3),(unsigned char *)temp_buffer,(display_type==DISPLAY_SERVICE_HISTOGRAM)?color_orange:color_darkred);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*3),temp_buffer,(display_type==DISPLAY_SERVICE_HISTOGRAM)?color_orange:color_darkred);
 
 	state3_avg=(double)((double)state3_sum/(double)total_buckets);
 	snprintf(temp_buffer,sizeof(temp_buffer)-1,"%5lu %5lu %5lu   %.2f",state3_min,state3_max,state3_sum,state3_avg);
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	string_width=gdFontSmall->w*strlen(temp_buffer);
-	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*3),(unsigned char *)temp_buffer,color_black);
+	gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*3),temp_buffer,color_black);
 
 	if(display_type==DISPLAY_SERVICE_HISTOGRAM){
 
 		snprintf(temp_buffer,sizeof(temp_buffer)-1,"Critical:");
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		string_width=gdFontSmall->w*strlen(temp_buffer);
-		gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*4),(unsigned char *)temp_buffer,color_red);
+		gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+15,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*4),temp_buffer,color_red);
 
 		state4_avg=(double)((double)state4_sum/(double)total_buckets);
 		snprintf(temp_buffer,sizeof(temp_buffer)-1,"%5lu %5lu %5lu   %.2f",state4_min,state4_max,state4_sum,state4_avg);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		string_width=gdFontSmall->w*strlen(temp_buffer);
-		gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*4),(unsigned char *)temp_buffer,color_black);
+		gdImageString(histogram_image,gdFontSmall,DRAWING_X_OFFSET+DRAWING_WIDTH+115,DRAWING_Y_OFFSET-DRAWING_HEIGHT+((string_height+5)*4),temp_buffer,color_black);
 	        }
 
 	return;

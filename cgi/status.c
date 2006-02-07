@@ -2,14 +2,15 @@
  *
  * STATUS.C -  Nagios Status CGI
  *
- * Copyright (c) 1999-2006 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 01-20-2006
+ * Copyright (c) 1999-2005 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 03-10-2005
  *
  * License:
  * 
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -250,7 +251,7 @@ int main(void){
 				for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
 					if(is_authorized_for_host(temp_host,&current_authdata)==FALSE)
 						continue;
-					if((strstr(temp_host->name,host_name)==temp_host->name) || !strncasecmp(temp_host->name,host_name,strlen(host_name))){
+					if(strstr(temp_host->name,host_name)==temp_host->name){
 						free(host_name);
 						host_name=strdup(temp_host->name);
 						break;
@@ -465,6 +466,7 @@ int main(void){
 
 	/* free all allocated memory */
 	free_memory();
+	free_extended_data();
 	free_comment_data();
 
 	/* free memory allocated to the sort lists */
@@ -2362,7 +2364,7 @@ void show_servicegroup_summaries(void){
 	printf("<table border=1 CLASS='status'>\n");
 
 	printf("<TR>\n");
-	printf("<TH CLASS='status'>Service Group</TH><TH CLASS='status'>Host Status Totals</TH><TH CLASS='status'>Service Status Totals</TH>\n");
+	printf("<TH CLASS='status'>Host Group</TH><TH CLASS='status'>Host Status Totals</TH><TH CLASS='status'>Service Status Totals</TH>\n");
 	printf("</TR>\n");
 
 	/* display status summary for all servicegroups */
@@ -2875,9 +2877,9 @@ void show_servicegroup_grid(servicegroup *temp_servicegroup){
 
 		printf("<a href='%s?host=%s'><img src='%s%s' border=0 alt='View Service Details For This Host' title='View Service Details For This Host'></a>\n",STATUS_CGI,url_encode(temp_host->name),url_images_path,STATUS_DETAIL_ICON);
 
-#ifdef USE_STATUSMAP
+
 		printf("<A HREF='%s?host=%s'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='%s' TITLE='%s'></A>",STATUSMAP_CGI,url_encode(temp_host->name),url_images_path,STATUSMAP_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT,"Locate Host On Map","Locate Host On Map");
-#endif
+
 		printf("</TD>\n");
 		printf("</TR>\n");
 
@@ -3170,9 +3172,9 @@ void show_servicegroup_hostgroup_member_overview(hoststatus *hststatus,int odd,v
 		        }
 	        }
 	printf("<a href='%s?host=%s'><img src='%s%s' border=0 alt='View Service Details For This Host' title='View Service Details For This Host'></a>\n",STATUS_CGI,url_encode(hststatus->host_name),url_images_path,STATUS_DETAIL_ICON);
-#ifdef USE_STATUSMAP
+
 	printf("<A HREF='%s?host=%s'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='%s' TITLE='%s'></A>",STATUSMAP_CGI,url_encode(hststatus->host_name),url_images_path,STATUSMAP_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT,"Locate Host On Map","Locate Host On Map");
-#endif
+
 	printf("</TD>");
 
 	printf("</TR>\n");
@@ -3814,9 +3816,9 @@ void show_hostgroup_grid(hostgroup *temp_hostgroup){
 		        }
 
 		printf("<a href='%s?host=%s'><img src='%s%s' border=0 alt='View Service Details For This Host' title='View Service Details For This Host'></a>\n",STATUS_CGI,url_encode(temp_host->name),url_images_path,STATUS_DETAIL_ICON);
-#ifdef USE_STATUSMAP
+
 		printf("<A HREF='%s?host=%s'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='%s' TITLE='%s'></A>",STATUSMAP_CGI,url_encode(temp_host->name),url_images_path,STATUSMAP_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT,"Locate Host On Map","Locate Host On Map");
-#endif
+
 		printf("</TD>\n");
 
 		printf("</TR>\n");
