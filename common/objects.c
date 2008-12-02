@@ -2,8 +2,8 @@
  *
  * OBJECTS.C - Object addition and search functions for Nagios
  *
- * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
- * Last Modified: 11-30-2008
+ * Copyright (c) 1999-2008 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 04-13-2008
  *
  * License:
  *
@@ -3082,6 +3082,7 @@ int number_of_immediate_parent_hosts(host *hst){
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
 		if(is_host_immediate_parent_of_host(hst,temp_host)==TRUE){
 			parents++;
+			break;
 		        }
 	        }
 
@@ -3098,6 +3099,7 @@ int number_of_total_parent_hosts(host *hst){
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
 		if(is_host_immediate_parent_of_host(hst,temp_host)==TRUE){
 			parents+=number_of_total_parent_hosts(temp_host)+1;
+			break;
 		        }
 	        }
 

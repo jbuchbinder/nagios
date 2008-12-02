@@ -2,8 +2,8 @@
  *
  * COMMANDS.C - External command functions for Nagios
  *
- * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
- * Last Modified:   11-30-2008
+ * Copyright (c) 1999-2008 Ethan Galstad (nagios@nagios.org)
+ * Last Modified:   10-15-2008
  *
  * License:
  *
@@ -1186,11 +1186,9 @@ int process_host_command(int cmd, time_t entry_time, char *args){
 
 	case CMD_ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST:
 		enable_and_propagate_notifications(temp_host,0,FALSE,TRUE,TRUE);
-		break;
 
 	case CMD_DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST:
 		disable_and_propagate_notifications(temp_host,0,FALSE,TRUE,TRUE);
-		break;
 
 	case CMD_ENABLE_HOST_SVC_NOTIFICATIONS:
 	case CMD_DISABLE_HOST_SVC_NOTIFICATIONS:
@@ -2892,19 +2890,6 @@ int cmd_change_object_char_var(int cmd,char *args){
 	unsigned long attr=MODATTR_NONE;
 	unsigned long hattr=MODATTR_NONE;
 	unsigned long sattr=MODATTR_NONE;
-
-	
-	/* SECURITY PATCH - disable these for the time being */
-	switch(cmd){
-	case CMD_CHANGE_GLOBAL_HOST_EVENT_HANDLER:
-	case CMD_CHANGE_GLOBAL_SVC_EVENT_HANDLER:
-	case CMD_CHANGE_HOST_EVENT_HANDLER:
-	case CMD_CHANGE_SVC_EVENT_HANDLER:
-	case CMD_CHANGE_HOST_CHECK_COMMAND:
-	case CMD_CHANGE_SVC_CHECK_COMMAND:
-		return ERROR;
-		}
-
 
 	/* get the command arguments */
 	switch(cmd){

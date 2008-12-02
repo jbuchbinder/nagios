@@ -2,7 +2,7 @@
  *
  * CGIUTILS.C - Common utilities for Nagios CGIs
  * 
- * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
+ * Copyright (c) 1999-2008 Ethan Galstad (nagios@nagios.org)
  * Last Modified: 11-02-2008
  *
  * License:
@@ -107,8 +107,6 @@ int             program_status_has_been_read=FALSE;
 int             refresh_rate=DEFAULT_REFRESH_RATE;
 
 int             escape_html_tags=FALSE;
-
-int             use_ssl_authentication=FALSE;
 
 int             default_statusmap_layout_method=0;
 int             default_statuswrl_layout_method=0;
@@ -407,9 +405,6 @@ int read_cgi_config_file(char *filename){
 
 		else if(!strcmp(var,"lock_author_names"))
 			lock_author_names=(atoi(val)>0)?TRUE:FALSE;
-
-		else if(!strcmp(var,"use_ssl_authentication"))
-			use_ssl_authentication=(atoi(val)>0)?TRUE:FALSE;
  	        }
 
 	/* free memory and close the file */
