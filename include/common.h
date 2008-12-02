@@ -1,7 +1,7 @@
 /************************************************************************
  *
  * Nagios Common Header File
- * Written By: Ethan Galstad (egalstad@nagios.org)
+ * Written By: Ethan Galstad (nagios@nagios.org)
  * Last Modified: 10-22-2007
  *
  * License:
@@ -21,8 +21,8 @@
  ************************************************************************/
 
 
-#define PROGRAM_VERSION "3.0.6"
-#define PROGRAM_MODIFICATION_DATE "12-01-2008"
+#define PROGRAM_VERSION "3.0.4"
+#define PROGRAM_MODIFICATION_DATE "10-15-2008"
 
 /*#define DEBUG_CHECK_IPC 1 */
 /*#define DEBUG_CHECK_IPC2 1*/

@@ -2,7 +2,7 @@
  *
  * STATUSWML.C -  Nagios Status CGI for WAP-enabled devices
  *
- * Copyright (c) 2001-2008 Ethan Galstad (egalstad@nagios.org)
+ * Copyright (c) 2001-2008 Ethan Galstad (nagios@nagios.org)
  * Last Modified: 10-15-2008
  *
  * License:
@@ -40,7 +40,6 @@ extern service *service_list;
 extern hoststatus *hoststatus_list;
 extern servicestatus *servicestatus_list;
 
-extern int	use_ssl_authentication;
 extern int      enable_notifications;
 extern int      execute_service_checks;
 extern int      nagios_process_state;
@@ -390,7 +389,7 @@ void display_index(void){
 	printf("<p align='center' mode='wrap'>\n");
 	printf("<b>Nagios %s</b><br/><b>WAP Interface</b><br/>\n",PROGRAM_VERSION);
 	printf("Copyright (C) 2001 Ethan Galstad<br/>\n");
-	printf("egalstad@nagios.org<br/><br/>\n");
+	printf("nagios@nagios.org<br/><br/>\n");
 	printf("License: <b>GPL</b><br/><br/>\n");
 	printf("Based in part on features found in AskAround's Wireless Network Tools<br/>\n");
 	printf("<b>www.askaround.com</b><br/>\n");
@@ -962,7 +961,7 @@ void display_host(void){
 
 	printf("<p align='center' mode='wrap'>\n");
 	printf("<b>Your Name:</b><br/>\n");
-	printf("<input name='name' value='%s' /><br/>\n",((use_ssl_authentication)?(getenv("SSL_CLIENT_S_DN_CN")):(getenv("REMOTE_USER"))));
+	printf("<input name='name' value='%s' /><br/>\n",getenv("REMOTE_USER"));
 	printf("<b>Comment:</b><br/>\n");
 	printf("<input name='comment' value='acknowledged by WAP'/>\n");
 
@@ -1178,7 +1177,7 @@ void display_service(void){
 
 	printf("<p align='center' mode='wrap'>\n");
 	printf("<b>Your Name:</b><br/>\n");
-	printf("<input name='name' value='%s' /><br/>\n",((use_ssl_authentication)?(getenv("SSL_CLIENT_S_DN_CN")):(getenv("REMOTE_USER"))));
+	printf("<input name='name' value='%s' /><br/>\n",getenv("REMOTE_USER"));
 	printf("<b>Comment:</b><br/>\n");
 	printf("<input name='comment' value='acknowledged by WAP'/>\n");
 

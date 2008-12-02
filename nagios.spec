@@ -1,6 +1,6 @@
 %define name nagios
-%define version 3.0.6
-%define release 1
+%define version 3.0.4
+%define release 1.fc4.test
 %define nsusr nagios
 %define nsgrp nagios
 %define cmdgrp nagiocmd
@@ -159,7 +159,7 @@ else
 	# filter apache primary group from secondary groups
 	sgrps=`/usr/bin/id -Gn $wwwusr 2>/dev/null | /bin/sed "s/^$pgrp //;s/ $pgrp //;s/^$pgrp$//;s/ /,/g;"`
 	if [ "z" == "z$sgrps" ] ; then
-		sgrps=%{cmdgrp}
+		sgrps=%{nsgrp}
 	else
 		sgrps=$sgrps,%{cmdgrp}
 	fi
@@ -367,11 +367,11 @@ rm -rf $RPM_BUILD_ROOT
 - p1.pl script included in package
 - web server restarted because Red Hat 7.3 init does not do 'reload'
 
-* Fri Jun 14 2002 Ethan Galstad <egalstad@nagios.org) (1.0b4)
+* Fri Jun 14 2002 Ethan Galstad <nagios@nagios.org) (1.0b4)
 - Modified requirements to work when installed using KickStart (Jeff Frost)
 - Changed method used for checking for user/group existence (Jeff Frost)
 
-* Tue May 15 2002 Ethan Galstad <egalstad@nagios.org) (1.0b1)
+* Tue May 15 2002 Ethan Galstad <nagios@nagios.org) (1.0b1)
 - Updated to work with new sample template-based config files (Darren Gamble)
 
 * Sun Feb 17 2002 Ole Gjerde <gjerde@ignus.com> (1.0a4)

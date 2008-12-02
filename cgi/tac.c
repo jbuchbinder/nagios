@@ -2,7 +2,7 @@
  *
  * TAC.C - Nagios Tactical Monitoring Overview CGI
  *
- * Copyright (c) 2001-2008 Ethan Galstad (egalstad@nagios.org)
+ * Copyright (c) 2001-2008 Ethan Galstad (nagios@nagios.org)
  * Last Modified: 01-08-2008
  *
  * This CGI program will display the contents of the Nagios
@@ -323,9 +323,9 @@ int main(void){
 	else if(services_unknown_unacknowledged==0 && services_warning_unacknowledged==0 && services_critical_unacknowledged==0 && hosts_down_unacknowledged==0 && hosts_unreachable_unacknowledged==0 && normal_sound!=NULL)
 		sound=normal_sound;
 	if(sound!=NULL){
-	        printf("<object type=\"audio/x-wav\" data=\"%s%s\" height=\"-\" width=\"0\">",url_media_path,sound);
+		printf("<object type=\"application/wav\" height=\"-\" width=\"0\">");
 		printf("<param name=\"filename\" value=\"%s%s\">",url_media_path,sound);
-		printf("<param name=\"autostart\" value=\"true\">");
+		printf("<param name=\"autostart\" value=\"1\">");
 		printf("<param name=\"playcount\" value=\"1\">");
 		printf("</object>");
 		}

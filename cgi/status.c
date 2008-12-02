@@ -2,8 +2,8 @@
  *
  * STATUS.C -  Nagios Status CGI
  *
- * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
- * Last Modified: 11-30-2008
+ * Copyright (c) 1999-2008 Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 06-23-2008
  *
  * License:
  * 
@@ -138,7 +138,6 @@ time_t current_time;
 
 char alert_message[MAX_MESSAGE_BUFFER];
 char *host_name=NULL;
-char *host_filter=NULL;
 char *hostgroup_name=NULL;
 char *servicegroup_name=NULL;
 char *service_filter=NULL;
@@ -243,46 +242,28 @@ int main(void){
 
 	/* if a navbar search was performed, find the host by name, address or partial name */
 	if(navbar_search==TRUE){
-		if(host_name!=NULL && NULL!=strstr(host_name, "*")){
-			/* allocate for 3 extra chars, ^, $ and \0 */
-			host_filter = malloc(sizeof(char) * (strlen(host_name) * 2 + 3));
-			int regex_i=1,i=0;
-			int len=strlen(host_name);
-			for (i=0;i<len;i++,regex_i++) {
-				if(host_name[i]=='*') {
-					host_filter[regex_i++]='.';
-					host_filter[regex_i]='*';
-					}
-				else
-					host_filter[regex_i]=host_name[i];
-				}
-			host_filter[0]='^';
-			host_filter[regex_i++]='$';
-			host_filter[regex_i]='\0';
-			}
-		else{
-			if((temp_host=find_host(host_name))==NULL){
+		if((temp_host=find_host(host_name))==NULL){
+			for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
+				if(is_authorized_for_host(temp_host,&current_authdata)==FALSE)
+					continue;
+				if(!strcmp(host_name,temp_host->address)){
+					free(host_name);
+					host_name=strdup(temp_host->name);
+					break;
+			                }
+		                }
+			if(temp_host==NULL){
 				for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
 					if(is_authorized_for_host(temp_host,&current_authdata)==FALSE)
 						continue;
-					if(!strcmp(host_name,temp_host->address)){
+					if((strstr(temp_host->name,host_name)==temp_host->name) || !strncasecmp(temp_host->name,host_name,strlen(host_name))){
 						free(host_name);
 						host_name=strdup(temp_host->name);
 						break;
-						}
-					}
-				if(temp_host==NULL){
-					for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
-						if(is_authorized_for_host(temp_host,&current_authdata)==FALSE)
-							continue;
-						if((strstr(temp_host->name,host_name)==temp_host->name) || !strncasecmp(temp_host->name,host_name,strlen(host_name))){
-							free(host_name);
-							host_name=strdup(temp_host->name);
-							break;
-							}
-						}
-					}
-				}
+			                        }
+		                        }
+			        }
+			}
 			/* last effort, search hostgroups then servicegroups */
 			if(temp_host==NULL){
 				if((temp_hostgroup=find_hostgroup(host_name))!=NULL){
@@ -296,7 +277,6 @@ int main(void){
 					show_all_servicegroups=FALSE;
 					free(host_name);
 					servicegroup_name=strdup(temp_servicegroup->group_name);
-					}
 				}
 			}
 	        }
@@ -458,9 +438,9 @@ int main(void){
 	else if(problem_services_unknown==0 && problem_services_warning==0 && problem_services_critical==0 && problem_hosts_down==0 && problem_hosts_unreachable==0 && normal_sound!=NULL)
 		sound=normal_sound;
 	if(sound!=NULL){
-		printf("<object type=\"audio/x-wav\" data=\"%s%s\" height=\"0\" width=\"0\">",url_media_path,sound);
+		printf("<object type=\"application/wav\" data=\"%s%s\" height=\"0\" width=\"0\">",url_media_path,sound);
 		printf("<param name=\"filename\" value=\"%s%s\">",url_media_path,sound);
-		printf("<param name=\"autostart\" value=\"true\">");
+		printf("<param name=\"autostart\" value=\"1\">");
 		printf("<param name=\"playcount\" value=\"1\">");
 		printf("</object>");
 		}
@@ -1217,7 +1197,7 @@ void show_host_status_totals(void){
 
 /* display a detailed listing of the status of all services... */
 void show_service_detail(void){
-	regex_t preg, preg_hostname;
+	regex_t preg;
 	time_t t;
 	char date_time[MAX_DATETIME_LENGTH];
 	char state_duration[48];
@@ -1391,8 +1371,6 @@ void show_service_detail(void){
 
 	if(service_filter!=NULL)
 		regcomp(&preg,service_filter,0);
-	if(host_filter!=NULL)
-		regcomp(&preg_hostname,host_filter,REG_ICASE);
 
 	temp_hostgroup=find_hostgroup(hostgroup_name);
 	temp_servicegroup=find_servicegroup(servicegroup_name);
@@ -1466,8 +1444,6 @@ void show_service_detail(void){
 
 		if(display_type==DISPLAY_HOSTS){
 			if(show_all_hosts==TRUE)
-				show_service=TRUE;
-			else if(host_filter!=NULL && 0==regexec(&preg_hostname,temp_status->host_name,0,NULL,0))
 				show_service=TRUE;
 			else if(!strcmp(host_name,temp_status->host_name))
 				show_service=TRUE;
@@ -3886,7 +3862,7 @@ void show_hostgroup_host_totals_summary(hostgroup *temp_hostgroup){
 
 	if(hosts_up>0){
 		printf("<TR>");
-		printf("<TD CLASS='miniStatusUP'><A HREF='%s?hostgroup=%s&style=hostdetail&&hoststatustypes=%d&hostprops=%lu'>%d UP</A></TD>",STATUS_CGI,url_encode(temp_hostgroup->group_name),HOST_UP,host_properties,hosts_up);
+		printf("<TD CLASS='miniStatusUP'><A HREF='%s?hostgroup=%s&style=detail&&hoststatustypes=%d&hostprops=%lu'>%d UP</A></TD>",STATUS_CGI,url_encode(temp_hostgroup->group_name),HOST_UP,host_properties,hosts_up);
 		printf("</TR>\n");
 		}
 
@@ -3895,7 +3871,7 @@ void show_hostgroup_host_totals_summary(hostgroup *temp_hostgroup){
 		printf("<TD CLASS='miniStatusDOWN'><TABLE BORDER='0'>\n");
 		printf("<TR>\n");
 
-		printf("<TD CLASS='miniStatusDOWN'><A HREF='%s?hostgroup=%s&style=hostdetail&hoststatustypes=%d&hostprops=%lu'>%d DOWN</A>&nbsp;:</TD>\n",STATUS_CGI,url_encode(temp_hostgroup->group_name),HOST_DOWN,host_properties,hosts_down);
+		printf("<TD CLASS='miniStatusDOWN'><A HREF='%s?hostgroup=%s&style=detail&hoststatustypes=%d&hostprops=%lu'>%d DOWN</A>&nbsp;:</TD>\n",STATUS_CGI,url_encode(temp_hostgroup->group_name),HOST_DOWN,host_properties,hosts_down);
 
 		printf("<TD><TABLE BORDER='0'>\n");
 
@@ -3923,7 +3899,7 @@ void show_hostgroup_host_totals_summary(hostgroup *temp_hostgroup){
 		printf("<TD CLASS='miniStatusUNREACHABLE'><TABLE BORDER='0'>\n");
 		printf("<TR>\n");
 
-		printf("<TD CLASS='miniStatusUNREACHABLE'><A HREF='%s?hostgroup=%s&style=hostdetail&hoststatustypes=%d&hostprops=%lu'>%d UNREACHABLE</A>&nbsp;:</TD>\n",STATUS_CGI,url_encode(temp_hostgroup->group_name),HOST_UNREACHABLE,host_properties,hosts_unreachable);
+		printf("<TD CLASS='miniStatusUNREACHABLE'><A HREF='%s?hostgroup=%s&style=detail&hoststatustypes=%d&hostprops=%lu'>%d UNREACHABLE</A>&nbsp;:</TD>\n",STATUS_CGI,url_encode(temp_hostgroup->group_name),HOST_UNREACHABLE,host_properties,hosts_unreachable);
 
 		printf("<TD><TABLE BORDER='0'>\n");
 
@@ -3947,7 +3923,7 @@ void show_hostgroup_host_totals_summary(hostgroup *temp_hostgroup){
 		}
 
 	if(hosts_pending>0)
-		printf("<TR><TD CLASS='miniStatusPENDING'><A HREF='%s?hostgroup=%s&style=hostdetail&hoststatustypes=%d&hostprops=%lu'>%d PENDING</A></TD></TR>\n",STATUS_CGI,url_encode(temp_hostgroup->group_name),HOST_PENDING,host_properties,hosts_pending);
+		printf("<TR><TD CLASS='miniStatusPENDING'><A HREF='%s?hostgroup=%s&style=detail&hoststatustypes=%d&hostprops=%lu'>%d PENDING</A></TD></TR>\n",STATUS_CGI,url_encode(temp_hostgroup->group_name),HOST_PENDING,host_properties,hosts_pending);
 
 	printf("</TABLE>\n");
 

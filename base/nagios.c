@@ -3,12 +3,12 @@
  * NAGIOS.C - Core Program Code For Nagios
  *
  * Program: Nagios
- * Version: 3.0.6
+ * Version: 3.0.4
  * License: GPL
  * Copyright (c) 1999-2007 Ethan Galstad (http://www.nagios.org)
  *
  * First Written:   01-28-1999 (start of development)
- * Last Modified:   12-01-2008
+ * Last Modified:   10-15-2008
  *
  * Description:
  *
@@ -452,7 +452,7 @@ int main(int argc, char **argv){
 		getcwd(config_file,MAX_FILENAME_LENGTH);
 
 		/* append a forward slash */
-		strncat(config_file,"/",1);
+		strncat(config_file,"/",MAX_FILENAME_LENGTH-2);
 		config_file[MAX_FILENAME_LENGTH-1]='\x0';
 
 		/* append the config file to the path */

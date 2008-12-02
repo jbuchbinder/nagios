@@ -3,33 +3,6 @@ Nagios 3.x Change Log
 #####################
 
 
-3.0.6 - 12/01/2008
-------------------
-* Fix for CGI submission of external commands (writing newlines and submitting service comments)
-* Fix for Apache group membership in RPM spec file
-* Fix for improper notification propagation command processing
-* Better out-of-disk-space error handling when writing retention and status files
-* Disabled adaptive check and eventhandler commands for security reasons
-* Fix for reading output from system commands (event handlers, etc) that have timed out
-* Added wildcard host matching in CGIs
-* Fixes for playing audio alerts in CGIs
-* Fix for incorrect host status links in status CGI when viewing hostgroup summary
-* Added support for x509 cert authentication in the CGIs
-
-
-
-3.0.5 - 11/04/2008
-------------------
-* Security fix for Cross Site Request Forgery (CSRF) bug reported by Tim Starling. 
-* Sample audio files for CGIs removed from distribution
-* Fix for mutliline config file continuation bug
-* Minor fix to RPM spec file
-* Fix for AIX compiler warnings
-* Minor sample config file fix
-* Added documentation on CGI security issues
-
-
-
 3.0.4 - 10/15/2008
 ------------------
 * Fix for properly terminating plugins when parent processes get killed (e.g. using 'killall nagios' with check_timeout plugins running)
