@@ -2,8 +2,8 @@
  *
  * XRDDEFAULT.C - Default external state retention routines for Nagios
  *
- * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
- * Last Modified: 11-30-2008
+ * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
+ * Last Modified: 01-23-2009
  *
  * License:
  *
@@ -72,6 +72,12 @@ extern int            use_large_installation_tweaks;
 extern int            use_retained_program_state;
 extern int            use_retained_scheduling_info;
 extern int            retention_scheduling_horizon;
+
+extern time_t         last_update_check;
+extern char           *last_program_version;
+extern int            update_available;
+extern char           *last_program_version;
+extern char           *new_program_version;
 
 extern unsigned long  next_comment_id;
 extern unsigned long  next_downtime_id;
@@ -315,6 +321,10 @@ int xrddefault_save_state_information(void){
 	fprintf(fp,"info {\n");
 	fprintf(fp,"created=%lu\n",current_time);
 	fprintf(fp,"version=%s\n",PROGRAM_VERSION);
+	fprintf(fp,"last_update_check=%lu\n",last_update_check);
+	fprintf(fp,"update_available=%d\n",update_available);
+	fprintf(fp,"last_version=%s\n",(last_program_version==NULL)?"":last_program_version);
+	fprintf(fp,"new_version=%s\n",(new_program_version==NULL)?"":new_program_version);
 	fprintf(fp,"}\n");
 
 	/* save program state information */
@@ -761,8 +771,10 @@ int xrddefault_read_state_information(void){
 					if(temp_host->current_state!=HOST_UP && temp_host->last_host_notification!=(time_t)0)
 						temp_host->next_host_notification=get_next_host_notification_time(temp_host,temp_host->last_host_notification);
 
-					/* update host status */
-					update_host_status(temp_host,FALSE);
+					/* ADDED 01/23/2009 adjust current check attempts if host in hard problem state (max attempts may have changed in config since restart) */
+					if(temp_host->current_state!=HOST_UP && temp_host->state_type==HARD_STATE)
+						temp_host->current_attempt=temp_host->max_attempts;
+					   
 
 					/* ADDED 02/20/08 assume same flapping state if large install tweaks enabled */
 					if(use_large_installation_tweaks==TRUE){
@@ -789,6 +801,9 @@ int xrddefault_read_state_information(void){
 					/* handle new vars added in 2.x */
 					if(temp_host->last_hard_state_change==(time_t)0)
 						temp_host->last_hard_state_change=temp_host->last_state_change;
+
+					/* update host status */
+					update_host_status(temp_host,FALSE);
 				        }
 
 				/* reset vars */
@@ -827,8 +842,10 @@ int xrddefault_read_state_information(void){
 					if(temp_service->has_been_checked==FALSE && temp_service->state_type==SOFT_STATE)
 						temp_service->state_type=HARD_STATE;
 
-					/* update service status */
-					update_service_status(temp_service,FALSE);
+					/* ADDED 01/23/2009 adjust current check attempt if service is in hard problem state (max attempts may have changed in config since restart) */
+					if(temp_service->current_state!=STATE_OK && temp_service->state_type==HARD_STATE)
+						temp_service->current_attempt=temp_service->max_attempts;
+					   
 
 					/* ADDED 02/20/08 assume same flapping state if large install tweaks enabled */
 					if(use_large_installation_tweaks==TRUE){
@@ -855,6 +872,9 @@ int xrddefault_read_state_information(void){
 					/* handle new vars added in 2.x */
 					if(temp_service->last_hard_state_change==(time_t)0)
 						temp_service->last_hard_state_change=temp_service->last_state_change;
+
+					/* update service status */
+					update_service_status(temp_service,FALSE);
 				        }
 
 				/* reset vars */
@@ -1006,6 +1026,22 @@ int xrddefault_read_state_information(void){
 					else
 						scheduling_info_is_ok=FALSE;
 				        }
+				else if(!strcmp(var,"version")){
+					/* initialize last version in case we're reading a pre-3.1.0 retention file */
+					if(last_program_version==NULL)
+						last_program_version=(char *)strdup(val);
+					}
+				else if(!strcmp(var,"last_update_check"))
+					last_update_check=strtoul(val,NULL,10);
+				else if(!strcmp(var,"update_available"))
+					update_available=atoi(val);
+				else if(!strcmp(var,"last_version")){
+					if(last_program_version)
+						my_free(last_program_version);
+					last_program_version=(char *)strdup(val);
+					}
+				else if(!strcmp(var,"new_version"))
+					new_program_version=(char *)strdup(val);
 				break;
 
 			case XRDDEFAULT_PROGRAMSTATUS_DATA:

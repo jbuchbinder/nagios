@@ -3,6 +3,24 @@ Nagios 3.x Change Log
 #####################
 
 
+3.1.0 - 01/25/2009
+------------------
+* Added automatic update check functionality - runs once a day to check for new Nagios releases
+* Splash screen on web UI now indicates whether a new update is available (requires that update checks are enabled)
+* Updates to nagiostats utility for faster execution if using external stats file
+* Added a bit more verbosity to config verification
+* Fixed bug in logging event handlers
+* Fix to prevent debug output from being shown when Nagios is compiled with embedded Perl interpreter
+* Fix for CPU hogging issues on OpenBSD
+* Fix to RPM spec file for sample configuration files
+* Fix for bug in time calculation routines that could cause notification, reporting, and check scheduling anomalies
+* Fix for scheduling forced service checks from web interface
+* Minor mods for frameset base for HTML compliance (more fixes coming soon)
+* Fix for bug in handling of hard host and service problem states during restarts that could incorrectly set current check attempt and adversely affect notifications, etc.
+* Fix for bug in timeperiod calculation of year/month rollovers and display of fixed calendar dates in web interface
+
+
+
 3.0.6 - 12/01/2008
 ------------------
 * Fix for CGI submission of external commands (writing newlines and submitting service comments)

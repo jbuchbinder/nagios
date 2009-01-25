@@ -3,12 +3,12 @@
  * NAGIOS.C - Core Program Code For Nagios
  *
  * Program: Nagios
- * Version: 3.0.6
+ * Version: 3.1.0
  * License: GPL
- * Copyright (c) 1999-2007 Ethan Galstad (http://www.nagios.org)
+ * Copyright (c) 1999-2009 Ethan Galstad (http://www.nagios.org)
  *
  * First Written:   01-28-1999 (start of development)
- * Last Modified:   12-01-2008
+ * Last Modified:   01-25-2009
  *
  * Description:
  *
@@ -129,6 +129,13 @@ int             auto_reschedule_checks=DEFAULT_AUTO_RESCHEDULE_CHECKS;
 int             auto_rescheduling_window=DEFAULT_AUTO_RESCHEDULING_WINDOW;
 
 int             additional_freshness_latency=DEFAULT_ADDITIONAL_FRESHNESS_LATENCY;
+
+int             check_for_updates=DEFAULT_CHECK_FOR_UPDATES;
+int             bare_update_check=DEFAULT_BARE_UPDATE_CHECK;
+time_t          last_update_check=0L;
+int             update_available=FALSE;
+char            *last_program_version=NULL;
+char            *new_program_version=NULL;
 
 time_t          last_command_check=0L;
 time_t          last_command_status_update=0L;
@@ -377,7 +384,7 @@ int main(int argc, char **argv){
 
 	if(daemon_mode==FALSE){
 		printf("\nNagios %s\n",PROGRAM_VERSION);
-		printf("Copyright (c) 1999-2008 Ethan Galstad (http://www.nagios.org)\n");
+		printf("Copyright (c) 1999-2009 Ethan Galstad (http://www.nagios.org)\n");
 		printf("Last Modified: %s\n",PROGRAM_MODIFICATION_DATE);
 		printf("License: GPL\n\n");
 	        }
@@ -469,18 +476,28 @@ int main(int argc, char **argv){
 		/* reset program variables */
 		reset_variables();
 
-		printf("Reading configuration data...\n\n");
+		printf("Reading configuration data...\n");
 
 		/* read in the configuration files (main config file, resource and object config files) */
 		if((result=read_main_config_file(config_file))==OK){
 
+			printf("   Read main config file okay...\n");
+
 			/* drop privileges */
 			if((result=drop_privileges(nagios_user,nagios_group))==ERROR)
-				printf("Failed to drop privileges.  Aborting.");
-			else
+				printf("   Failed to drop privileges.  Aborting.");
+			else{
 				/* read object config files */
-				result=read_all_object_data(config_file);
+				if((result=read_all_object_data(config_file))==OK)
+					printf("   Read object config files okay...\n");
+				else
+					printf("   Error processing object config files!\n");
+				}
 		        }
+		else
+			printf("   Error processing main config file!\n\n");
+
+		printf("\n");
 
 		/* there was a problem reading the config files */
 		if(result!=OK){
@@ -773,6 +790,9 @@ int main(int argc, char **argv){
 			
 			/* initialize check statistics */
 			init_check_stats();
+
+			/* check for updates */
+			check_for_nagios_updates(FALSE,TRUE);
 
 			/* update all status data (with retained information) */
 			update_all_status_data();

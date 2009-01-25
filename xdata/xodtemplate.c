@@ -2,8 +2,8 @@
  *
  * XODTEMPLATE.C - Template-based object configuration data input routines
  *
- * Copyright (c) 2001-2008 Ethan Galstad (egalstad@nagios.org)
- * Last Modified: 06-23-2008
+ * Copyright (c) 2001-2009 Ethan Galstad (egalstad@nagios.org)
+ * Last Modified: 01-01-2009
  *
  * Description:
  *
@@ -145,8 +145,12 @@ int xodtemplate_read_config_data(char *main_config_file, int options, int cache,
 	int result=OK;
 
 
-	if(main_config_file==NULL)
+	if(main_config_file==NULL){
+#ifdef NSCORE
+		printf("Error: No main config file passed to object routines!\n");
+#endif
 		return ERROR;
+		}
 
 	/* get variables from main config file */
 	xodtemplate_grab_config_info(main_config_file);
@@ -176,8 +180,12 @@ int xodtemplate_read_config_data(char *main_config_file, int options, int cache,
 	/* allocate memory for 256 config files (increased dynamically) */
 	xodtemplate_current_config_file=0;
 	xodtemplate_config_files=(char **)malloc(256*sizeof(char **));
-	if(xodtemplate_config_files==NULL)
+	if(xodtemplate_config_files==NULL){
+#ifdef NSOCRE
+		printf("Unable to allocate memory!\n");
+#endif
 		return ERROR;
+		}
 
 	/* are the objects we're reading already pre-sorted? */
 	presorted_objects=FALSE;
@@ -199,6 +207,9 @@ int xodtemplate_read_config_data(char *main_config_file, int options, int cache,
 		/* determine the directory of the main config file */
 		if((config_file=(char *)strdup(main_config_file))==NULL){
 			my_free(xodtemplate_config_files);
+#ifdef NSCORE
+			printf("Unable to allocate memory!\n");
+#endif
 			return ERROR;
 			}
 		config_base_dir=(char *)strdup(dirname(config_file));
@@ -208,6 +219,9 @@ int xodtemplate_read_config_data(char *main_config_file, int options, int cache,
 		if((thefile=mmap_fopen(main_config_file))==NULL){
 			my_free(config_base_dir);
 			my_free(xodtemplate_config_files);
+#ifdef NSCORE
+			printf("Unable to open main config file '%s'\n",main_config_file);
+#endif
 			return ERROR;
 	                }
 
@@ -535,6 +549,11 @@ int xodtemplate_process_config_dir(char *dirname, int options){
 	register int x=0;
 	struct stat stat_buf;
 
+#ifdef NSCORE
+	if(verify_config==TRUE)
+		printf("Processing object config directory '%s'...\n",dirname);
+#endif
+
 	/* open the directory for reading */
 	dirp=opendir(dirname);
         if(dirp==NULL){
@@ -615,6 +634,11 @@ int xodtemplate_process_config_file(char *filename, int options){
 	register int y=0;
 	char *ptr=NULL;
 
+
+#ifdef NSCORE
+	if(verify_config==TRUE)
+		printf("Processing object config file '%s'...\n",filename);
+#endif
 
 	/* save config file name */
 	xodtemplate_config_files[xodtemplate_current_config_file++]=(char *)strdup(filename);
@@ -11592,9 +11616,9 @@ int xodtemplate_cache_objects(char *cache_file){
 
 				switch(temp_daterange->type){
 				case DATERANGE_CALENDAR_DATE:
-					fprintf(fp,"\t%d-%02d-%02d",temp_daterange->syear,temp_daterange->smon,temp_daterange->smday);
+					fprintf(fp,"\t%d-%02d-%02d",temp_daterange->syear,temp_daterange->smon+1,temp_daterange->smday);
 					if((temp_daterange->smday!=temp_daterange->emday) || (temp_daterange->smon!=temp_daterange->emon) || (temp_daterange->syear!=temp_daterange->eyear))
-						fprintf(fp," - %d-%02d-%02d",temp_daterange->eyear,temp_daterange->emon,temp_daterange->emday);
+						fprintf(fp," - %d-%02d-%02d",temp_daterange->eyear,temp_daterange->emon+1,temp_daterange->emday);
 					if(temp_daterange->skip_interval>1)
 						fprintf(fp," / %d",temp_daterange->skip_interval);
 					break;
