@@ -24,11 +24,9 @@ include_once(dirname(__FILE__).'/includes/utils.inc.php');
 </div>
 
 <div id="currentversioninfo">
-<div class="product">Nagios<sup><span style="font-size: small;">&reg;</span></sup> Core<sup><span style="font-size: small;">&trade;</span></sup></div>
-<div class="version">Version 3.2.0</div>
-<div class="releasedate">August 12, 2009</div>
-<div class="checkforupdates"><a href="http://www.nagios.org/checkforupdates/?version=3.2.0&product=nagioscore" target="_blank">Check for updates</a></div>
-<div class="whatsnew"><a href="docs/whatsnew.html">Read what's new in Nagios Core 3</a></div>
+<div class="version">Version 3.1.2</div>
+<div class="releasedate">June 23, 2009</div>
+<div class="whatsnew"><a href="docs/whatsnew.html">Read what's new in Nagios 3</a></div>
 </div>
 
 
@@ -61,14 +59,14 @@ include_once(dirname(__FILE__).'/includes/utils.inc.php');
 <div id="mainfooter">
 <div id="maincopy">Copyright &copy; 2009 Nagios Core Development Team and Community Contributors.<br>Copyright &copy; 1999-2009 Ethan Galstad.<br>See the THANKS file for more information on contributors.</div>
 <div CLASS="disclaimer">
-Nagios Core is licensed under the GNU General Public License and is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE WARRANTY OF DESIGN, MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.  Nagios, Nagios Core and the Nagios logo are trademarks, servicemarks, registered trademarks or registered servicemarks owned by Nagios Enterprises, LLC.  Usage of the Nagios marks are governed by our <A href="http://www.nagios.org/legal/trademarkpolicy/">trademark policy</a>.
+Nagios is licensed under the GNU General Public License and is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE WARRANTY OF DESIGN, MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.  Nagios and the Nagios logo are trademarks, servicemarks, registered trademarks or registered servicemarks owned by Nagios Enterprises, LLC.  Usage of the Nagios marks are governed by our <A href="http://www.nagios.org/legal/trademarkpolicy/">trademark policy</a>.
 </div>
 <div class="logos">
 <a href="http://www.nagios.com/" target="_blank"><img src="images/NagiosEnterprises-whitebg-112x46.png" width="112" height="46" border="0" style="padding: 0 20px 0 0;" title="Nagios Enterprises"></a>  
 
 <a href="http://www.nagios.org/" target="_blank"><img src="images/weblogo1.png" width="102" height="47" border="0" style="padding: 0 40px 0 40px;" title="Nagios.org"></a>
 
-<a href="http://sourceforge.net/projects/nagios"><img src="images/sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo" /></a>
+<a href="http://sourceforge.net/projects/nagios"><img src="http://sflogo.sourceforge.net/sflogo.php?group_id=26589&amp;type=2" width="125" height="37" border="0" alt="SourceForge.net Logo" /></a>
 </div>
 </div> 
 

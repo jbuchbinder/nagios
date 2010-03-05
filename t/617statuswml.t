@@ -5,10 +5,7 @@
 use warnings;
 use strict;
 use Test::More;
-
-# Useful for diagnostics, but not part of a core perl install
-#use Test::LongString;
-
+use Test::LongString;
 use FindBin qw($Bin);
 
 chdir $Bin or die "Cannot chdir";

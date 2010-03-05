@@ -2,14 +2,13 @@
  *
  * NAGIOS.C - Core Program Code For Nagios
  *
- * Program: Nagios Core
- * Version: 3.2.0
+ * Program: Nagios
+ * Version: 3.1.2
  * License: GPL
- * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
- * Copyright (c) 1999-2009 Ethan Galstad
+ * Copyright (c) 1999-2009 Ethan Galstad (http://www.nagios.org)
  *
  * First Written:   01-28-1999 (start of development)
- * Last Modified:   08-12-2009
+ * Last Modified:   06-23-2009
  *
  * Description:
  *
@@ -384,7 +383,7 @@ int main(int argc, char **argv){
 #endif
 
 	if(daemon_mode==FALSE){
-		printf("\nNagios Core %s\n",PROGRAM_VERSION);
+		printf("\nNagios %s\n",PROGRAM_VERSION);
 		printf("Copyright (c) 2009 Nagios Core Development Team and Community Contributors\n");
 		printf("Copyright (c) 1999-2009 Ethan Galstad\n");
 		printf("Last Modified: %s\n",PROGRAM_MODIFICATION_DATE);
@@ -606,21 +605,6 @@ int main(int argc, char **argv){
 				}
 		        }
 
-#undef TEST_TIMEPERIODS
-#ifdef TEST_TIMEPERIODS
-		/* DO SOME TIMEPERIOD TESTING - ADDED 08/11/2009 */
-		time_t now, pref_time, valid_time;
-		timeperiod *tp;
-		tp=find_timeperiod("247_exclusion");
-		time(&now);
-		pref_time=now;
-		get_next_valid_time(pref_time,&valid_time,tp);
-		printf("=====\n");
-		printf("CURRENT:   %lu = %s",(unsigned long)now,ctime(&now));
-		printf("PREFERRED: %lu = %s",(unsigned long)pref_time,ctime(&pref_time));
-		printf("NEXT:      %lu = %s",(unsigned long)valid_time,ctime(&valid_time));
-		printf("=====\n");
-#endif
 
 		/* clean up after ourselves */
 		cleanup();

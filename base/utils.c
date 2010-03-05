@@ -852,9 +852,7 @@ int check_time_against_period(time_t test_time, timeperiod *tperiod){
 	t->tm_sec=0;
 	t->tm_min=0;
 	t->tm_hour=0;
-        /* Removed for the moment. This fixes a bug where the timeperiod is incorrectly calculated */
-	/* See t-tap/test_timeperiods for a test failure */
-	/* t->tm_isdst=-1; */
+        t->tm_isdst=-1;
 	midnight=(unsigned long)mktime(t);
 
 	/**** check exceptions first ****/
@@ -1167,7 +1165,7 @@ void get_next_valid_time(time_t pref_time, time_t *valid_time, timeperiod *tperi
 	printf("CURRENT YEAR: %d, MON: %d, MDAY: %d, WDAY: %d\n",current_time_year,current_time_mon,current_time_mday,current_time_wday);
 #endif
 
-	/**** check exceptions (in this timeperiod definition) first ****/
+	/**** check exceptions first ****/
 	for(daterange_type=0;daterange_type<DATERANGE_TYPES;daterange_type++){
 
 #ifdef TEST_TIMEPERIODS_B
@@ -1178,7 +1176,7 @@ void get_next_valid_time(time_t pref_time, time_t *valid_time, timeperiod *tperi
 
 			/* get the start time */
 			switch(daterange_type){
-			case DATERANGE_CALENDAR_DATE: /* 2009-08-11 */
+			case DATERANGE_CALENDAR_DATE:
 				t->tm_sec=0;
 				t->tm_min=0;
 				t->tm_hour=0;
@@ -1188,7 +1186,7 @@ void get_next_valid_time(time_t pref_time, time_t *valid_time, timeperiod *tperi
                                 t->tm_isdst=-1;
 				start_time=mktime(t);
 				break;
-			case DATERANGE_MONTH_DATE:  /* january 1 */
+			case DATERANGE_MONTH_DATE:
 				/* what year should we use? */
 				year=(pref_time_year < current_time_year)?current_time_year:pref_time_year;
 				/* advance an additional year if we already passed the end month date */
@@ -1196,7 +1194,7 @@ void get_next_valid_time(time_t pref_time, time_t *valid_time, timeperiod *tperi
 					year++;
 				start_time=calculate_time_from_day_of_month(year,temp_daterange->smon,temp_daterange->smday);
 				break;
-			case DATERANGE_MONTH_DAY:  /* day 3 */
+			case DATERANGE_MONTH_DAY:
 				/* what year should we use? */
 				year=(pref_time_year < current_time_year)?current_time_year:pref_time_year;
 				/* use current month */
@@ -1213,7 +1211,7 @@ void get_next_valid_time(time_t pref_time, time_t *valid_time, timeperiod *tperi
 					}
 				start_time=calculate_time_from_day_of_month(year,month,temp_daterange->smday);
 				break;
-			case DATERANGE_MONTH_WEEK_DAY: /* thursday 2 april */
+			case DATERANGE_MONTH_WEEK_DAY:
 				/* what year should we use? */
 				year=(pref_time_year < current_time_year)?current_time_year:pref_time_year;
 				/* calculate time of specified weekday of specific month */
@@ -1224,7 +1222,7 @@ void get_next_valid_time(time_t pref_time, time_t *valid_time, timeperiod *tperi
 					start_time=calculate_time_from_weekday_of_month(year,temp_daterange->smon,temp_daterange->swday,temp_daterange->swday_offset);
 					}
 				break;
-			case DATERANGE_WEEK_DAY: /* wednesday 1 */
+			case DATERANGE_WEEK_DAY:
 				/* what year should we use? */
 				year=(pref_time_year < current_time_year)?current_time_year:pref_time_year;
 				/* calculate time of specified weekday of month */
@@ -1245,10 +1243,6 @@ void get_next_valid_time(time_t pref_time, time_t *valid_time, timeperiod *tperi
 				continue;
 				break;
 				}
-
-#ifdef TEST_TIMEPERIODS_B
-			printf("START TIME: %lu = %s",start_time,ctime(&start_time));
-#endif
 
 			/* get the end time */
 			switch(daterange_type){
@@ -1444,7 +1438,7 @@ void get_next_valid_time(time_t pref_time, time_t *valid_time, timeperiod *tperi
 		}
 
 
-	/**** find next available time from normal, weekly rotating schedule (in this timeperiod definition) ****/
+	/**** find next available time from normal, weekly rotating schedule ****/
 
 	/* check a one week rotation of time */
 	has_looped=FALSE;

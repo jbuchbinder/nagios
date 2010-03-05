@@ -2,8 +2,8 @@
  *
  * STATUS.C -  Nagios Status CGI
  *
- * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Last Modified: 07-03-2009
+ * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
+ * Last Modified: 11-30-2008
  *
  * License:
  * 
@@ -187,8 +187,6 @@ int main(void){
 	host *temp_host=NULL;
 	hostgroup *temp_hostgroup=NULL;
 	servicegroup *temp_servicegroup=NULL;
-	int regex_i=1,i=0;
-	int len;
 	
 	time(&current_time);
 
@@ -248,7 +246,8 @@ int main(void){
 		if(host_name!=NULL && NULL!=strstr(host_name, "*")){
 			/* allocate for 3 extra chars, ^, $ and \0 */
 			host_filter = malloc(sizeof(char) * (strlen(host_name) * 2 + 3));
-			len=strlen(host_name);
+			int regex_i=1,i=0;
+			int len=strlen(host_name);
 			for (i=0;i<len;i++,regex_i++) {
 				if(host_name[i]=='*') {
 					host_filter[regex_i++]='.';
@@ -1604,11 +1603,8 @@ void show_service_detail(void){
 				if(temp_hoststatus->problem_has_been_acknowledged==TRUE){
 					printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s#comments'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='This host problem has been acknowledged' TITLE='This host problem has been acknowledged'></A></TD>",EXTINFO_CGI,DISPLAY_HOST_INFO,url_encode(temp_status->host_name),url_images_path,ACKNOWLEDGEMENT_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT);
 			                }
-				/* only show comments if this is a non-read-only user */
-				if(is_authorized_for_read_only(&current_authdata)==FALSE){
-					if(total_comments>0)
-						printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s#comments'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='This host has %d comment%s associated with it' TITLE='This host has %d comment%s associated with it'></A></TD>",EXTINFO_CGI,DISPLAY_HOST_INFO,url_encode(temp_status->host_name),url_images_path,COMMENT_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT,total_comments,(total_comments==1)?"":"s",total_comments,(total_comments==1)?"":"s");
-					}
+				if(total_comments>0)
+					printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s#comments'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='This host has %d comment%s associated with it' TITLE='This host has %d comment%s associated with it'></A></TD>",EXTINFO_CGI,DISPLAY_HOST_INFO,url_encode(temp_status->host_name),url_images_path,COMMENT_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT,total_comments,(total_comments==1)?"":"s",total_comments,(total_comments==1)?"":"s");
 				if(temp_hoststatus->notifications_enabled==FALSE){
 					printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='Notifications for this host have been disabled' TITLE='Notifications for this host have been disabled'></A></TD>",EXTINFO_CGI,DISPLAY_HOST_INFO,url_encode(temp_status->host_name),url_images_path,NOTIFICATIONS_DISABLED_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT);
 			                }
@@ -1684,13 +1680,10 @@ void show_service_detail(void){
 			printf("<TABLE BORDER=0 cellspacing=0 cellpadding=0>\n");
 			printf("<TR>\n");
 			total_comments=number_of_service_comments(temp_service->host_name,temp_service->description);
-			/* only show comments if this is a non-read-only user */
-			if(is_authorized_for_read_only(&current_authdata)==FALSE){
-				if(total_comments>0){
-					printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s",EXTINFO_CGI,DISPLAY_SERVICE_INFO,url_encode(temp_status->host_name));
-					printf("&service=%s#comments'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='This service has %d comment%s associated with it' TITLE='This service has %d comment%s associated with it'></A></TD>",url_encode(temp_status->description),url_images_path,COMMENT_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT,total_comments,(total_comments==1)?"":"s",total_comments,(total_comments==1)?"":"s");
-					}
-				}
+			if(total_comments>0){
+				printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s",EXTINFO_CGI,DISPLAY_SERVICE_INFO,url_encode(temp_status->host_name));
+				printf("&service=%s#comments'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='This service has %d comment%s associated with it' TITLE='This service has %d comment%s associated with it'></A></TD>",url_encode(temp_status->description),url_images_path,COMMENT_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT,total_comments,(total_comments==1)?"":"s",total_comments,(total_comments==1)?"":"s");
+			        }
 			if(temp_status->problem_has_been_acknowledged==TRUE){
 				printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s",EXTINFO_CGI,DISPLAY_SERVICE_INFO,url_encode(temp_status->host_name));
 				printf("&service=%s#comments'><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d ALT='This service problem has been acknowledged' TITLE='This service problem has been acknowledged'></A></TD>",url_encode(temp_status->description),url_images_path,ACKNOWLEDGEMENT_ICON,STATUS_ICON_WIDTH,STATUS_ICON_HEIGHT);

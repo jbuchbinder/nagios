@@ -716,7 +716,6 @@ PATH_TO_TRACEROUTE
 PACKDIR
 VERSION
 subdirs
-USE_LIBTAP
 CGIEXTRAS
 GDLIBS
 PERLLIBS
@@ -1313,7 +1312,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
 --disable-statusmap=disables compilation of statusmap CGI
 --disable-statuswrl=disables compilation of statuswrl (VRML) CGI
---enable-nanosleep enables use of nanosleep (instead of sleep) in event timing
+--enable-nanosleep enables use of nanosleep (instead sleep) in event timing
 --enable-event-broker enables integration of event broker routines
 --enable-embedded-perl will enable embedded Perl interpreter
 --enable-cygwin enables building under the CYGWIN environment
@@ -1323,14 +1322,10 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-nagios-user=<user>
-                          sets user name to run nagios
-  --with-nagios-group=<grp>
-                          sets group name to run nagios
-  --with-command-user=<user>
-                          sets user name for command access
-  --with-command-group=<grp>
-                          sets group name for command access
+--with-nagios-user=<user> sets user name to run nagios
+--with-nagios-group=<grp> sets group name to run nagios
+--with-command-user=<user> sets user name for command access
+--with-command-group=<grp> sets group name for command access
 --with-mail=<path_to_mail> sets path to equivalent program to mail
 --with-httpd-conf=<path_to_conf> sets path to Apache conf.d directory
 --with-checkresult-dir=<path> sets path to check results spool directory
@@ -1764,9 +1759,9 @@ ac_config_headers="$ac_config_headers include/config.h include/snprintf.h includ
 
 
 PKG_NAME=nagios
-PKG_VERSION="3.2.0"
+PKG_VERSION="3.1.2"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="08-12-2009"
+PKG_REL_DATE="06-23-2009"
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
@@ -5255,176 +5250,6 @@ fi
 
 
 
-{ echo "$as_me:$LINENO: checking for library containing getservbyname" >&5
-echo $ECHO_N "checking for library containing getservbyname... $ECHO_C" >&6; }
-if test "${ac_cv_search_getservbyname+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char getservbyname ();
-int
-main ()
-{
-return getservbyname ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' nsl; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext &&
-       $as_test_x conftest$ac_exeext; then
-  ac_cv_search_getservbyname=$ac_res
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-
-fi
-
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext
-  if test "${ac_cv_search_getservbyname+set}" = set; then
-  break
-fi
-done
-if test "${ac_cv_search_getservbyname+set}" = set; then
-  :
-else
-  ac_cv_search_getservbyname=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ echo "$as_me:$LINENO: result: $ac_cv_search_getservbyname" >&5
-echo "${ECHO_T}$ac_cv_search_getservbyname" >&6; }
-ac_res=$ac_cv_search_getservbyname
-if test "$ac_res" != no; then
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  if test "$ac_cv_search_getservbyname" != "none required"; then
-		SOCKETLIBS="$SOCKETLIBS -lnsl"
-	fi
-fi
-
-{ echo "$as_me:$LINENO: checking for library containing connect" >&5
-echo $ECHO_N "checking for library containing connect... $ECHO_C" >&6; }
-if test "${ac_cv_search_connect+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char connect ();
-int
-main ()
-{
-return connect ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' socket; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext &&
-       $as_test_x conftest$ac_exeext; then
-  ac_cv_search_connect=$ac_res
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-
-fi
-
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext
-  if test "${ac_cv_search_connect+set}" = set; then
-  break
-fi
-done
-if test "${ac_cv_search_connect+set}" = set; then
-  :
-else
-  ac_cv_search_connect=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ echo "$as_me:$LINENO: result: $ac_cv_search_connect" >&5
-echo "${ECHO_T}$ac_cv_search_connect" >&6; }
-ac_res=$ac_cv_search_connect
-if test "$ac_res" != no; then
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  if test "$ac_cv_search_connect" != "none required"; then
-		SOCKETLIBS="$SOCKETLIBS -lsocket"
-	fi
-fi
-
 
 
 
@@ -5563,8 +5388,7 @@ eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
 	 test -z "$ac_c_werror_flag" ||
 	 test ! -s conftest.err
        } && test -s conftest.$ac_objext; then
-
-cat >>confdefs.h <<\_ACEOF
+  cat >>confdefs.h <<\_ACEOF
 #define SOCKET_SIZE_TYPE size_t
 _ACEOF
  { echo "$as_me:$LINENO: result: size_t" >&5
@@ -5573,8 +5397,7 @@ else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-
-cat >>confdefs.h <<\_ACEOF
+	cat >>confdefs.h <<\_ACEOF
 #define SOCKET_SIZE_TYPE int
 _ACEOF
  { echo "$as_me:$LINENO: result: int" >&5
@@ -6100,6 +5923,7 @@ fi
 
 
 
+
 # Check whether --with-nagios_user was given.
 if test "${with_nagios_user+set}" = set; then
   withval=$with_nagios_user; nagios_user=$withval
@@ -6117,11 +5941,9 @@ fi
 
 
 
-
 cat >>confdefs.h <<_ACEOF
 #define DEFAULT_NAGIOS_USER "$nagios_user"
 _ACEOF
-
 
 cat >>confdefs.h <<_ACEOF
 #define DEFAULT_NAGIOS_GROUP "$nagios_grp"
@@ -6307,9 +6129,8 @@ XDDCOMMENT=
 USE_MYSQL=no
 USE_PGSQL=no
 
-
 cat >>confdefs.h <<_ACEOF
-#define USE_XSDDEFAULT
+#define USE_XSDDEFAULT 1
 _ACEOF
 
 XSDC="xsddefault.c"
@@ -6320,9 +6141,8 @@ echo "We'll use default routines (in xdata/xsddefault.*) for status data I/O..."
 
 
 
-
 cat >>confdefs.h <<_ACEOF
-#define USE_XCDDEFAULT
+#define USE_XCDDEFAULT 1
 _ACEOF
 
 XCDC="xcddefault.c"
@@ -6333,9 +6153,8 @@ echo "We'll use default routines (in xdata/xcddefault.*) for comment data I/O...
 
 
 
-
 cat >>confdefs.h <<_ACEOF
-#define USE_XRDDEFAULT
+#define USE_XRDDEFAULT 1
 _ACEOF
 
 XRDC="xrddefault.c"
@@ -6346,9 +6165,8 @@ echo "We'll use default routines (in xdata/xrddefault.*) for retention data I/O.
 
 
 
-
 cat >>confdefs.h <<_ACEOF
-#define USE_XODTEMPLATE
+#define USE_XODTEMPLATE 1
 _ACEOF
 
 XODC="xodtemplate.c"
@@ -6360,9 +6178,8 @@ echo "We'll use template-based routines (in xdata/xodtemplate.*) for object data
 
 
 
-
 cat >>confdefs.h <<_ACEOF
-#define USE_XPDDEFAULT
+#define USE_XPDDEFAULT 1
 _ACEOF
 
 XPDC="xpddefault.c"
@@ -6373,9 +6190,8 @@ echo "We'll use default routines (in xdata/xpddefault.*) for performance data I/
 
 
 
-
 cat >>confdefs.h <<_ACEOF
-#define USE_XDDDEFAULT
+#define USE_XDDDEFAULT 1
 _ACEOF
 
 XDDC="xdddefault.c"
@@ -6423,9 +6239,8 @@ fi
 
 
 if test x$TRYSTATUSWRL = xyep; then
-
-cat >>confdefs.h <<_ACEOF
-#define USE_STATUSWRL
+	cat >>confdefs.h <<_ACEOF
+#define USE_STATUSWRL 1
 _ACEOF
 
 	CGIEXTRAS="$CGIEXTRAS statuswrl.cgi"
@@ -6811,7 +6626,7 @@ echo "${ECHO_T}no" >&6; }
 		echo "      1. Make sure /etc/ld.so.conf has an entry for the directory in"
 		echo "         which the GD, PNG, and JPEG libraries are installed."
 		echo "      2. Run 'ldconfig' to update the run-time linker options."
-		echo "      3. Run 'make clean' in the Nagios distribution to clean out"
+		echo "      3. Run 'make clean' in the Nagios dblistribution to clean out"
 		echo "         any old references to your previous compile."
 		echo "      4. Rerun the configure script."
 		echo ""
@@ -6830,93 +6645,21 @@ echo "${ECHO_T}no" >&6; }
 		else
 		echo "GD library was found!"
 		if test x$TRYSTATUSMAP = xyep; then
-
-cat >>confdefs.h <<_ACEOF
-#define USE_STATUSMAP
+			cat >>confdefs.h <<_ACEOF
+#define USE_STATUSMAP 1
 _ACEOF
 
 			CGIEXTRAS="$CGIEXTRAS statusmap.cgi"
-			{ echo "$as_me:$LINENO: checking for gdImageCreateTrueColor in -lgd" >&5
-echo $ECHO_N "checking for gdImageCreateTrueColor in -lgd... $ECHO_C" >&6; }
-if test "${ac_cv_lib_gd_gdImageCreateTrueColor+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lgd  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gdImageCreateTrueColor ();
-int
-main ()
-{
-return gdImageCreateTrueColor ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext &&
-       $as_test_x conftest$ac_exeext; then
-  ac_cv_lib_gd_gdImageCreateTrueColor=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_gd_gdImageCreateTrueColor=no
-fi
-
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ echo "$as_me:$LINENO: result: $ac_cv_lib_gd_gdImageCreateTrueColor" >&5
-echo "${ECHO_T}$ac_cv_lib_gd_gdImageCreateTrueColor" >&6; }
-if test $ac_cv_lib_gd_gdImageCreateTrueColor = yes; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_GDIMAGECREATETRUECOLOR 1
-_ACEOF
-
-fi
-
 		fi
 
-
-cat >>confdefs.h <<_ACEOF
-#define USE_TRENDS
+				cat >>confdefs.h <<_ACEOF
+#define USE_TRENDS 1
 _ACEOF
 
 		CGIEXTRAS="$CGIEXTRAS trends.cgi"
 
-
-cat >>confdefs.h <<_ACEOF
-#define USE_HISTOGRAM
+				cat >>confdefs.h <<_ACEOF
+#define USE_HISTOGRAM 1
 _ACEOF
 
 	        CGIEXTRAS="$CGIEXTRAS histogram.cgi"
@@ -6951,9 +6694,8 @@ else
 fi
 
 if test x$USE_NANOSLEEP = xyes; then
-
-cat >>confdefs.h <<_ACEOF
-#define USE_NANOSLEEP
+	cat >>confdefs.h <<_ACEOF
+#define USE_NANOSLEEP 1
 _ACEOF
 
 fi
@@ -7162,9 +6904,8 @@ fi
 echo "${ECHO_T}$ac_cv_lib_ltdl_lt_dlinit" >&6; }
 if test $ac_cv_lib_ltdl_lt_dlinit = yes; then
 
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LTDL_H
+			cat >>confdefs.h <<\_ACEOF
+#define HAVE_LTDL_H 1
 _ACEOF
 
 			some_dl_found="yes"
@@ -7367,9 +7108,8 @@ fi
 echo "${ECHO_T}$ac_cv_lib_dl_dlopen" >&6; }
 if test $ac_cv_lib_dl_dlopen = yes; then
 
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_DLFCN_H
+			cat >>confdefs.h <<\_ACEOF
+#define HAVE_DLFCN_H 1
 _ACEOF
 
 			some_dl_found="yes"
@@ -7542,9 +7282,8 @@ echo "${ECHO_T}$MOD_LDFLAGS" >&6; }
 
 
 
-
-cat >>confdefs.h <<_ACEOF
-#define USE_EVENT_BROKER
+	cat >>confdefs.h <<_ACEOF
+#define USE_EVENT_BROKER 1
 _ACEOF
 
 	BROKER_O="broker.o nebmods.o"
@@ -7577,8 +7316,7 @@ if test "${with_perlcache+set}" = set; then
 
 else
 
-
-cat >>confdefs.h <<\_ACEOF
+	cat >>confdefs.h <<\_ACEOF
 #define DO_CLEAN "1"
 _ACEOF
 
@@ -7589,9 +7327,8 @@ fi
 
 if test x$USEPERL = xyes; then
 
-
-cat >>confdefs.h <<_ACEOF
-#define EMBEDDEDPERL
+	cat >>confdefs.h <<_ACEOF
+#define EMBEDDEDPERL 1
 _ACEOF
 
 	PERLLIBS="`perl -MExtUtils::Embed -e ldopts`"
@@ -7607,16 +7344,14 @@ _ACEOF
 	echo "Embedded Perl interpreter will be compiled in..."
 
 		if test x$PERLCACHE = xyes; then
-
-cat >>confdefs.h <<\_ACEOF
+		cat >>confdefs.h <<\_ACEOF
 #define DO_CLEAN "0"
 _ACEOF
 
 		PERLCACHE=yes;
 		echo "Internally compiled Perl scripts will be cached..."
 	else
-
-cat >>confdefs.h <<\_ACEOF
+		cat >>confdefs.h <<\_ACEOF
 #define DO_CLEAN "1"
 _ACEOF
 
@@ -7627,9 +7362,8 @@ fi
 if test x$USEPERL = xyes; then
 	if (perl -e 'use Config;exit -1 unless ($Config{'usethreads'});'); then
 		echo "Using threaded perl"
-
-cat >>confdefs.h <<_ACEOF
-#define THREADEDPERL
+		cat >>confdefs.h <<_ACEOF
+#define THREADEDPERL 1
 _ACEOF
 
 	fi
@@ -7696,7 +7430,6 @@ echo "${ECHO_T}no" >&6; }
 fi
 
 
-
 cat >>confdefs.h <<_ACEOF
 #define TRACEROUTE_COMMAND "$PATH_TO_TRACEROUTE"
 _ACEOF
@@ -7757,9 +7490,8 @@ else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-
-cat >>confdefs.h <<\_ACEOF
-#define NEED_VA_LIST
+	cat >>confdefs.h <<\_ACEOF
+#define NEED_VA_LIST 1
 _ACEOF
  { echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6; }
@@ -7790,11 +7522,7 @@ fi
 if test "$enable_libtap" = "yes" ; then
 	subdirs="$subdirs tap"
 
-	USE_LIBTAP=yes
-else
-	USE_LIBTAP=no
 fi
-
 
 
 
@@ -7848,7 +7576,7 @@ fi
 
 
 
-ac_config_files="$ac_config_files Makefile subst pkginfo base/Makefile common/Makefile contrib/Makefile cgi/Makefile html/Makefile module/Makefile xdata/Makefile daemon-init t/Makefile t-tap/Makefile"
+ac_config_files="$ac_config_files Makefile subst pkginfo base/Makefile common/Makefile contrib/Makefile cgi/Makefile html/Makefile module/Makefile xdata/Makefile daemon-init t-tap/Makefile"
 
 
 
@@ -8345,7 +8073,6 @@ do
     "module/Makefile") CONFIG_FILES="$CONFIG_FILES module/Makefile" ;;
     "xdata/Makefile") CONFIG_FILES="$CONFIG_FILES xdata/Makefile" ;;
     "daemon-init") CONFIG_FILES="$CONFIG_FILES daemon-init" ;;
-    "t/Makefile") CONFIG_FILES="$CONFIG_FILES t/Makefile" ;;
     "t-tap/Makefile") CONFIG_FILES="$CONFIG_FILES t-tap/Makefile" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
@@ -8551,7 +8278,6 @@ PATH_TO_TRACEROUTE!$PATH_TO_TRACEROUTE$ac_delim
 PACKDIR!$PACKDIR$ac_delim
 VERSION!$VERSION$ac_delim
 subdirs!$subdirs$ac_delim
-USE_LIBTAP!$USE_LIBTAP$ac_delim
 CGIEXTRAS!$CGIEXTRAS$ac_delim
 GDLIBS!$GDLIBS$ac_delim
 PERLLIBS!$PERLLIBS$ac_delim
@@ -8566,7 +8292,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 18; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 17; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
