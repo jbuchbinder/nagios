@@ -10,10 +10,10 @@ else
 fi
 
 # Current version number
-CURRENTVERSION=3.2.0
+CURRENTVERSION=3.1.1
 
 # Last date
-LASTDATE=08-12-2009
+LASTDATE=06-22-2009
 
 if [ "x$1" = "x" ]
 then
@@ -30,21 +30,15 @@ then
 	exit 1
 fi
 
-# Keep track of last version, as it is needed to update quickstart guide pages
-lastversion=$CURRENTVERSION
-
-# What's the new version number (if any)?
 newversion=$1
 if [ "x$newversion" = "xnewdate" ]
 then
-    # No new version number, just a new version date
     newversion=$CURRENTVERSION
 fi
 
 # Update version number and release date in main HTML page
 perl -i -p -e "s/>Version .*</>Version $newversion</;" html/main.php
 perl -i -p -e "s/releasedate\">.*<\//releasedate\">$LONGDATE<\//;" html/main.php
-perl -i -p -e "s/\?version=.*&product=/\?version=$newversion&product=/;" html/main.php
 
 # Update version number and release date in common code
 perl -i -p -e "s/VERSION \".*\"/VERSION \"$newversion\"/;" include/common.h
@@ -64,11 +58,6 @@ perl -i -p -e "s/PKG_REL_DATE=.*\"/PKG_REL_DATE=\"$SHORTDATE\"/;" configure.in
 
 # Update RPM spec file with version number
 perl -i -p -e "s/%define version .*/%define version $newversion/;" nagios.spec
-
-# Update quickstart guides with new version number
-perl -i -p -e "s/nagios-$lastversion/nagios-$newversion/;" html/docs/quickstart-fedora.html
-perl -i -p -e "s/nagios-$lastversion/nagios-$newversion/;" html/docs/quickstart-opensuse.html
-perl -i -p -e "s/nagios-$lastversion/nagios-$newversion/;" html/docs/quickstart-ubuntu.html
 
 # Update this file with version number and last date
 perl -i -p -e "s/^CURRENTVERSION=.*/CURRENTVERSION=$newversion/;" update-version

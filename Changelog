@@ -3,42 +3,6 @@ Nagios 3.x Change Log
 #####################
 
 
-3.2.1 ????
------------------
-ENHANCEMENTS
-* Link to allow scheduling downtime for all services on a host (Hendrik Baecker)
-* Speedup to CGIs when lots of comments or downtimes in status.dat file (Jonathan Kamens)
-
-FIXES
-* Fix for incorrect scheduling when time has gone back an hour (partial fix for 24x7)
-* Fix for compile on Fedora Core 3 (bug #0000082)
-* Fix for compile on Solaris
-* Fix for logging test, which was not timezone aware (bug #0000077 - Allan Clark)
-* Trivial cleanups for autoconf (Allan Clark)
-* Fix for CSS validation of padding: X
-* Fix for documentation re: case-insensitive nature of custom variables (Marc Powell)
-* Fix for template configurations which use negated wildcards (Tim Wilde)
-
-WARNINGS
-
-3.2.0 - 08/12/2009
-------------------
-* Fix for read-only permissions bug in CGIs that caused problems viewing comments (bug #0000029)
-* Fix for incorrect CGI reports (availability, trends, etc.) when reporting period spans Daylight Savings Time (bug #0000046)
-* Fix for detection of truecolor support in GD library (Lars Hecking)
-* Reverted to use --datadir configure script option instead of the more recently introduced --datarootdir option
-* Status and retention files are now flushed/synced to disk to prevent incomplete information being displayed in CGIs
-* Fix for incorrect next service check time calculation when Nagios is reloaded with different timeperiod ranges
-* Updated Fedora quickstart guide to indicate PHP requirements
-* Known issue: Service checks that are defined with timeperiods that contain "exclude" directives are incorrectly re-scheduled.  Don't use these for now - we'll get this fixed for 3.4
-
-
-
-3.1.2 - 06/23/2009
-------------------
-* Fix for CPU hogging in service and host check scheduling logic
-
-
 
 3.1.1 - 06/22/2009
 ------------------

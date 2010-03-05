@@ -136,8 +136,6 @@ Make sure you've installed the following packages on your Fedora installation be
 
 <li>Apache</li>
 
-<li>PHP</li>
-
 <li>GCC compiler</li>
 
 <li><a href="http://www.boutell.com/gd/">GD</a> development libraries</li>
@@ -156,9 +154,11 @@ You can use <i>yum</i> to install these packages by running the following comman
 
 <pre>
 
-yum install httpd php
+yum install httpd
 
-yum install gcc glibc glibc-common
+yum install gcc
+
+yum install glibc glibc-common
 
 yum install gd gd-devel
 
@@ -264,9 +264,9 @@ Download the source code tarballs of both Nagios and the Nagios plugins (visit <
 
 <pre>
 
-wget http://prdownloads.sourceforge.net/sourceforge/nagios/nagios-3.2.0.tar.gz
+wget http://osdn.dl.sourceforge.net/sourceforge/nagios/nagios-3.1.1.tar.gz
 
-wget http://prdownloads.sourceforge.net/sourceforge/nagiosplug/nagios-plugins-1.4.11.tar.gz
+wget http://osdn.dl.sourceforge.net/sourceforge/nagiosplug/nagios-plugins-1.4.11.tar.gz
 
 </pre>
 
@@ -292,9 +292,9 @@ Extract the Nagios source code tarball.
 
 cd ~/downloads
 
-tar xzf nagios-3.2.0.tar.gz
+tar xzf nagios-3.1.1.tar.gz
 
-cd nagios-3.2.0
+cd nagios-3.1.1
 
 </pre>
 

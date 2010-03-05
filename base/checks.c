@@ -3,7 +3,7 @@
  * CHECKS.C - Service and host check functions for Nagios
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Last Modified: 06-23-2009
+ * Last Modified: 06-16-2009
  *
  * License:
  *
@@ -277,19 +277,10 @@ int run_scheduled_service_check(service *svc, int check_options, double latency)
 				preferred_time=current_time+((svc->check_interval<=0)?300:(svc->check_interval*interval_length));
 
 			/* make sure we rescheduled the next service check at a valid time */
-			get_next_valid_time(preferred_time,&next_valid_time,svc->check_period_ptr);
-
-			/*
-			logit(NSLOG_RUNTIME_WARNING,TRUE,"Warning: Service '%s' on host '%s' timeperiod check failed...\n",svc->description,svc->host_name);
-			logit(NSLOG_RUNTIME_WARNING,TRUE,"Current time: %s",ctime(&current_time));
-			logit(NSLOG_RUNTIME_WARNING,TRUE,"Preferred time: %s",ctime(&preferred_time));
-			logit(NSLOG_RUNTIME_WARNING,TRUE,"Next valid time: %s",ctime(&next_valid_time));
-			*/
+			get_next_valid_time(current_time,&next_valid_time,svc->check_period_ptr);
 
 			/* the service could not be rescheduled properly - set the next check time for next week */
-			/*if(time_is_valid==FALSE && next_valid_time==preferred_time){*/
-			/* UPDATED 08/12/09 EG to reflect proper timeperod check logic */
-			if(time_is_valid==FALSE &&  check_time_against_period(next_valid_time,svc->check_period_ptr)==ERROR){
+			if(time_is_valid==FALSE && next_valid_time==preferred_time){
 
 				/*
 				svc->next_check=(time_t)(next_valid_time+(60*60*24*365));
@@ -2807,7 +2798,7 @@ int run_scheduled_host_check_3x(host *hst, int check_options, double latency){
 				preferred_time=current_time+((hst->check_interval<=0)?300:(hst->check_interval*interval_length));
 
 			/* make sure we rescheduled the next host check at a valid time */
-			get_next_valid_time(preferred_time,&next_valid_time,hst->check_period_ptr);
+			get_next_valid_time(current_time,&next_valid_time,hst->check_period_ptr);
 
 			/* the host could not be rescheduled properly - set the next check time for next week */
 			if(time_is_valid==FALSE && next_valid_time==preferred_time){
