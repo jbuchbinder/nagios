@@ -3,24 +3,6 @@ Nagios 3.x Change Log
 #####################
 
 
-3.2.1 ????
------------------
-ENHANCEMENTS
-* Link to allow scheduling downtime for all services on a host (Hendrik Baecker)
-* Speedup to CGIs when lots of comments or downtimes in status.dat file (Jonathan Kamens)
-
-FIXES
-* Fix for incorrect scheduling when time has gone back an hour (partial fix for 24x7)
-* Fix for compile on Fedora Core 3 (bug #0000082)
-* Fix for compile on Solaris
-* Fix for logging test, which was not timezone aware (bug #0000077 - Allan Clark)
-* Trivial cleanups for autoconf (Allan Clark)
-* Fix for CSS validation of padding: X
-* Fix for documentation re: case-insensitive nature of custom variables (Marc Powell)
-* Fix for template configurations which use negated wildcards (Tim Wilde)
-
-WARNINGS
-
 3.2.0 - 08/12/2009
 ------------------
 * Fix for read-only permissions bug in CGIs that caused problems viewing comments (bug #0000029)

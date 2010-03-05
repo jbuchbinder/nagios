@@ -187,8 +187,6 @@ int main(void){
 	host *temp_host=NULL;
 	hostgroup *temp_hostgroup=NULL;
 	servicegroup *temp_servicegroup=NULL;
-	int regex_i=1,i=0;
-	int len;
 	
 	time(&current_time);
 
@@ -248,7 +246,8 @@ int main(void){
 		if(host_name!=NULL && NULL!=strstr(host_name, "*")){
 			/* allocate for 3 extra chars, ^, $ and \0 */
 			host_filter = malloc(sizeof(char) * (strlen(host_name) * 2 + 3));
-			len=strlen(host_name);
+			int regex_i=1,i=0;
+			int len=strlen(host_name);
 			for (i=0;i<len;i++,regex_i++) {
 				if(host_name[i]=='*') {
 					host_filter[regex_i++]='.';
