@@ -3,20 +3,6 @@ Nagios 3.x Change Log
 #####################
 
 
-3.2.3 - ??????????
-------------------
-ENHANCEMENTS
-
-FIXES
-* Fixes problem where disabling all active hosts/services was not taking effect
-* Fixes for compiler warnings (code cleanup by Stephen Gran)
-* Fixes for format errors in event handler logging (Guillaume Rousse)
-* Fixed incorrect info in sample nagios.cfg file for state_retention_file (Michael Friedrich)
-* Fixed broker_event_handler() to return ERR if data is NULL (Michael Friedrich)
-
-WARNINGS
-
-
 3.2.2 - 09/01/2010
 ------------------
 ENHANCEMENTS
@@ -56,6 +42,8 @@ FIXES
 * Doc updates related to cleaning of custom macros (Peter Valdemar Morch)
 * Fix to sample notify-service-by-email command (bug #62)
 * Fix for retaining host display name and alias, as well as service display name (Folkert van Heusden)
+
+WARNINGS
 
 
 

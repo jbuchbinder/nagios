@@ -3,7 +3,7 @@
  * NAGIOSTATS.C - Displays Nagios Statistics
  *
  * Program: Nagiostats
- * Version: 3.2.3
+ * Version: 3.2.2
  * License: GPL
  * Copyright (c) 2003-2008 Ethan Galstad (egalstad@nagios.org)
  *
@@ -206,7 +206,6 @@ int read_config_file(void);
 int read_status_file(void);
 void strip(char *);
 void get_time_breakdown(unsigned long,int *,int *,int *,int *);
-int read_nagiostats_file(void);
 
 
 int main(int argc, char **argv){
@@ -1381,10 +1380,12 @@ int read_status_file(void){
 int read_nagiostats_file(void){
 	char temp_buffer[MAX_INPUT_BUFFER];
 	FILE *fp=NULL;
+	int data_type=STATUS_NO_DATA;
 	char *var=NULL;
 	char *val=NULL;
 	char *temp_ptr=NULL;
 	time_t current_time;
+	unsigned long time_difference=0L;
 
 	time(&current_time);
 
