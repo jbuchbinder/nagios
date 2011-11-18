@@ -177,8 +177,14 @@ int main(void) {
 		else {
 			json_object_object_add(jout, "status", json_object_new_string("OK"));
 			}
+		if (temp_servicestatus->plugin_output) json_object_object_add(jout, "plugin_output", json_object_new_string(temp_servicestatus->plugin_output));
+		if (temp_servicestatus->long_plugin_output) json_object_object_add(jout, "long_plugin_output", json_object_new_string(temp_servicestatus->long_plugin_output));
 		json_object_object_add(jout, "acknowledged", json_object_new_int(temp_servicestatus->problem_has_been_acknowledged));
+		json_object_object_add(jout, "current_attempt", json_object_new_int(temp_servicestatus->current_attempt));
+		json_object_object_add(jout, "max_attempts", json_object_new_int(temp_servicestatus->max_attempts));
 		json_object_object_add(jout, "checks_enabled", json_object_new_int(temp_servicestatus->checks_enabled));
+		json_object_object_add(jout, "notifications_enabled", json_object_new_int(temp_servicestatus->notifications_enabled));
+		json_object_object_add(jout, "is_flapping", json_object_new_int(temp_servicestatus->is_flapping));
 		json_object_object_add(jout, "scheduled_downtime_depth", json_object_new_int(temp_servicestatus->scheduled_downtime_depth));
 		printf("%s", json_object_to_json_string(jout));
 		}
