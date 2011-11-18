@@ -39,7 +39,8 @@ CFLAGS=-Wall @CFLAGS@ @DEFS@ -DNSCGI
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
 
-CGIS=avail.cgi cmd.cgi config.cgi extinfo.cgi history.cgi notifications.cgi outages.cgi showlog.cgi status.cgi statuswml.cgi summary.cgi tac.cgi $(CGIEXTRAS)
+CGIS=api.cgi avail.cgi cmd.cgi config.cgi extinfo.cgi history.cgi notifications.cgi outages.cgi showlog.cgi status.cgi statuswml.cgi summary.cgi tac.cgi $(CGIEXTRAS)
+JSONC_SOURCES=../json-c/arraylist.c ../json-c/debug.c ../json-c/json_object.c ../json-c/json_tokener.c ../json-c/json_util.c ../json-c/linkhash.c ../json-c/printbuf.c ../json-c/urldecode.c
 
 # External data I/O code and headers
 XSDC=@XSDC@
@@ -125,6 +126,9 @@ $(SRC_COMMON)/shared.o: $(SRC_COMMON)/shared.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 ########## CGIS ##########
+
+api.cgi: api.c $(CGIDEPS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ api.c $(CGILIBS) $(LIBS) $(JSONC_SOURCES)
 
 avail.cgi: avail.c $(CGIDEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ avail.c $(CGILIBS) $(LIBS)
