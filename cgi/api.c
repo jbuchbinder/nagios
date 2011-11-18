@@ -53,6 +53,7 @@ static nagios_macros *mac;
 
 int process_cgivars(void);
 void document_header();
+json_object *service_to_json(servicestatus *s);
 
 authdata current_authdata;
 time_t current_time;
@@ -158,34 +159,8 @@ int main(void) {
 		if (service_name == NULL) {
 			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Service name not given.");
 			}
-
-		servicestatus *temp_servicestatus = NULL;
-
-		json_object *jout = json_object_new_object();
-		temp_servicestatus = find_servicestatus(host_name, service_name);
-		json_object_object_add(jout, "host", json_object_new_string(temp_servicestatus->host_name));
-		json_object_object_add(jout, "service", json_object_new_string(temp_servicestatus->description));
-		if (temp_servicestatus->status == SERVICE_CRITICAL) {
-			json_object_object_add(jout, "status", json_object_new_string("CRITICAL"));
-			}
-		else if (temp_servicestatus->status == SERVICE_WARNING) {
-			json_object_object_add(jout, "status", json_object_new_string("WARNING"));
-			}
-		else if (temp_servicestatus->status == SERVICE_UNKNOWN) {
-			json_object_object_add(jout, "status", json_object_new_string("UNKNOWN"));
-			}
-		else {
-			json_object_object_add(jout, "status", json_object_new_string("OK"));
-			}
-		if (temp_servicestatus->plugin_output) json_object_object_add(jout, "plugin_output", json_object_new_string(temp_servicestatus->plugin_output));
-		if (temp_servicestatus->long_plugin_output) json_object_object_add(jout, "long_plugin_output", json_object_new_string(temp_servicestatus->long_plugin_output));
-		json_object_object_add(jout, "acknowledged", json_object_new_int(temp_servicestatus->problem_has_been_acknowledged));
-		json_object_object_add(jout, "current_attempt", json_object_new_int(temp_servicestatus->current_attempt));
-		json_object_object_add(jout, "max_attempts", json_object_new_int(temp_servicestatus->max_attempts));
-		json_object_object_add(jout, "checks_enabled", json_object_new_int(temp_servicestatus->checks_enabled));
-		json_object_object_add(jout, "notifications_enabled", json_object_new_int(temp_servicestatus->notifications_enabled));
-		json_object_object_add(jout, "is_flapping", json_object_new_int(temp_servicestatus->is_flapping));
-		json_object_object_add(jout, "scheduled_downtime_depth", json_object_new_int(temp_servicestatus->scheduled_downtime_depth));
+		servicestatus *s = find_servicestatus(host_name, service_name);
+		json_object *jout = service_to_json(s);
 		printf("%s", json_object_to_json_string(jout));
 		}
 	else if (!strcmp(api_action, "host.get")) {
@@ -273,5 +248,33 @@ void document_header() {
         printf("Expires: %s\r\n", date_time);
 
         printf("Content-type: application/json\r\n\r\n");
+}
+
+json_object *service_to_json(servicestatus *s) {
+	json_object *jout = json_object_new_object();
+	json_object_object_add(jout, "host", json_object_new_string(s->host_name));
+	json_object_object_add(jout, "service", json_object_new_string(s->description));
+	if (s->status == SERVICE_CRITICAL) {
+		json_object_object_add(jout, "status", json_object_new_string("CRITICAL"));
+		}
+	else if (s->status == SERVICE_WARNING) {
+		json_object_object_add(jout, "status", json_object_new_string("WARNING"));
+		}
+	else if (s->status == SERVICE_UNKNOWN) {
+		json_object_object_add(jout, "status", json_object_new_string("UNKNOWN"));
+		}
+	else {
+		json_object_object_add(jout, "status", json_object_new_string("OK"));
+		}
+	if (s->plugin_output) json_object_object_add(jout, "plugin_output", json_object_new_string(s->plugin_output));
+	if (s->long_plugin_output) json_object_object_add(jout, "long_plugin_output", json_object_new_string(s->long_plugin_output));
+	json_object_object_add(jout, "acknowledged", json_object_new_int(s->problem_has_been_acknowledged));
+	json_object_object_add(jout, "current_attempt", json_object_new_int(s->current_attempt));
+	json_object_object_add(jout, "max_attempts", json_object_new_int(s->max_attempts));
+	json_object_object_add(jout, "checks_enabled", json_object_new_int(s->checks_enabled));
+	json_object_object_add(jout, "notifications_enabled", json_object_new_int(s->notifications_enabled));
+	json_object_object_add(jout, "is_flapping", json_object_new_int(s->is_flapping));
+	json_object_object_add(jout, "scheduled_downtime_depth", json_object_new_int(s->scheduled_downtime_depth));
+	return jout;
 }
 
