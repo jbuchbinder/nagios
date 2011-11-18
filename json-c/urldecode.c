@@ -1,6 +1,9 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define URLDECODE_STATE_SEARCH 0
 #define URLDECODE_STATE_CONVERTING 1
