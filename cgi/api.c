@@ -34,9 +34,6 @@
 
 #include "../json-c/json.h"
 
-extern int             refresh_rate;
-extern time_t          program_start;
-
 extern char main_config_file[MAX_FILENAME_LENGTH];
 
 extern host *host_list;
@@ -63,6 +60,7 @@ time_t current_time;
 char alert_message[MAX_MESSAGE_BUFFER];
 char *api_action = NULL;
 char *host_name = NULL;
+char *service_name = NULL;
 char *host_filter = NULL;
 char *hostgroup_name = NULL;
 char *servicegroup_name = NULL;
@@ -82,6 +80,7 @@ unsigned long service_properties = 0L;
 	}
 
 #define STATUS_API_ERROR_SETUP 500
+#define STATUS_API_ERROR_PARAM 501
 
 int main(void) {
 	int result = OK;
@@ -132,12 +131,55 @@ int main(void) {
 
 	/* perform actions here */
 	if (!strcmp(api_action, "host.list")) {
-		/* TODO: return list of hosts */
 		json_object *jout = json_object_new_array();
 		host *temp_host = NULL;
 		for (temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
 			json_object_array_add(jout, json_object_new_string(temp_host->name));
 			}
+		printf("%s", json_object_to_json_string(jout));
+		}
+	else if (!strcmp(api_action, "host.services")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		json_object *jout = json_object_new_array();
+		service *temp_service = NULL;
+		for (temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+			if (!strcmp(temp_service->host_name, host_name)) {
+				json_object_array_add(jout, json_object_new_string(temp_service->display_name));
+				}
+			}
+		printf("%s", json_object_to_json_string(jout));
+		}
+	else if (!strcmp(api_action, "service.get")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		if (service_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Service name not given.");
+			}
+
+		servicestatus *temp_servicestatus = NULL;
+
+		json_object *jout = json_object_new_object();
+		temp_servicestatus = find_servicestatus(host_name, service_name);
+		json_object_object_add(jout, "host", json_object_new_string(temp_servicestatus->host_name));
+		json_object_object_add(jout, "service", json_object_new_string(temp_servicestatus->description));
+		if (temp_servicestatus->status == SERVICE_CRITICAL) {
+			json_object_object_add(jout, "status", json_object_new_string("CRITICAL"));
+			}
+		else if (temp_servicestatus->status == SERVICE_WARNING) {
+			json_object_object_add(jout, "status", json_object_new_string("WARNING"));
+			}
+		else if (temp_servicestatus->status == SERVICE_UNKNOWN) {
+			json_object_object_add(jout, "status", json_object_new_string("UNKNOWN"));
+			}
+		else {
+			json_object_object_add(jout, "status", json_object_new_string("OK"));
+			}
+		json_object_object_add(jout, "acknowledged", json_object_new_int(temp_servicestatus->problem_has_been_acknowledged));
+		json_object_object_add(jout, "checks_enabled", json_object_new_int(temp_servicestatus->checks_enabled));
+		json_object_object_add(jout, "scheduled_downtime_depth", json_object_new_int(temp_servicestatus->scheduled_downtime_depth));
 		printf("%s", json_object_to_json_string(jout));
 		}
 	else if (!strcmp(api_action, "host.get")) {
@@ -188,6 +230,18 @@ int process_cgivars(void) {
 
 			host_name = strdup(variables[x]);
 			strip_html_brackets(host_name);
+			}
+
+		/* we found the service argument */
+		else if(!strcmp(variables[x], "service")) {
+			x++;
+			if(variables[x] == NULL) {
+				error = TRUE;
+				break;
+				}
+
+			service_name = strdup(variables[x]);
+			strip_html_brackets(service_name);
 			}
 
 		}
