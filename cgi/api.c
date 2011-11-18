@@ -54,6 +54,7 @@ static nagios_macros *mac;
 int process_cgivars(void);
 void document_header();
 json_object *service_to_json(servicestatus *s);
+json_object *host_to_json(host *h);
 
 authdata current_authdata;
 time_t current_time;
@@ -164,7 +165,12 @@ int main(void) {
 		printf("%s", json_object_to_json_string(jout));
 		}
 	else if (!strcmp(api_action, "host.get")) {
-		/* TODO: return host data */
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		host *s = find_host(host_name);
+		json_object *jout = host_to_json(s);
+		printf("%s", json_object_to_json_string(jout));
 		}
 
 	/* free all allocated memory */
@@ -248,6 +254,18 @@ void document_header() {
         printf("Expires: %s\r\n", date_time);
 
         printf("Content-type: application/json\r\n\r\n");
+}
+
+json_object *host_to_json(host *h) {
+	json_object *jout = json_object_new_object();
+	json_object_object_add(jout, "name", json_object_new_string(h->name));
+	if (h->alias) json_object_object_add(jout, "alias", json_object_new_string(h->alias));
+	json_object_object_add(jout, "address", json_object_new_string(h->address));
+	json_object_object_add(jout, "checks_enabled", json_object_new_int(h->checks_enabled));
+	json_object_object_add(jout, "flap_detection_enabled", json_object_new_int(h->flap_detection_enabled));
+	json_object_object_add(jout, "obsess_over_host", json_object_new_int(h->obsess_over_host));
+	if (h->notes) json_object_object_add(jout, "notes", json_object_new_string(h->notes));
+	return jout;
 }
 
 json_object *service_to_json(servicestatus *s) {
