@@ -34,7 +34,10 @@
 
 #include "../json-c/json.h"
 
+extern const char *extcmd_get_name(int id);
+
 extern char main_config_file[MAX_FILENAME_LENGTH];
+extern char command_file[MAX_FILENAME_LENGTH];
 
 extern host *host_list;
 extern service *service_list;
@@ -55,6 +58,9 @@ int process_cgivars(void);
 void document_header();
 json_object *service_to_json(servicestatus *s);
 json_object *host_to_json(host *h);
+json_object *build_result(int code, char *comment);
+__attribute__((format(printf, 2, 3))) static int cmd_submitf(int id, const char *fmt, ...);
+int write_command_to_file(char *cmd);
 
 authdata current_authdata;
 time_t current_time;
@@ -70,6 +76,11 @@ int host_alert = FALSE;
 int show_all_hosts = TRUE;
 int show_all_hostgroups = TRUE;
 int show_all_servicegroups = TRUE;
+int sticky = FALSE;
+int send_notification = FALSE;
+int persistent_comment = FALSE;
+char *comment_author = NULL;
+char *comment_data = NULL;
 
 unsigned long host_properties = 0L;
 unsigned long service_properties = 0L;
@@ -131,6 +142,12 @@ int main(void) {
 	/* get authentication information */
 	get_authentication_information(&current_authdata);
 
+	contact *contact = find_contact(current_authdata.username);
+	if(contact != NULL && contact->alias != NULL)
+		comment_author = contact->alias;
+	else
+		comment_author = current_authdata.username;
+
 	/* perform actions here */
 	if (!strcmp(api_action, "host.list")) {
 		json_object *jout = json_object_new_array();
@@ -163,6 +180,23 @@ int main(void) {
 		servicestatus *s = find_servicestatus(host_name, service_name);
 		json_object *jout = service_to_json(s);
 		printf("%s", json_object_to_json_string(jout));
+		}
+	else if (!strcmp(api_action, "host.ack")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		int result = cmd_submitf(CMD_ACKNOWLEDGE_HOST_PROBLEM, "%s;%d;%d;%d;%s;%s", host_name, (sticky == TRUE) ? ACKNOWLEDGEMENT_STICKY : ACKNOWLEDGEMENT_NORMAL, send_notification, persistent_comment, comment_author, comment_data);
+		printf("%s", json_object_to_json_string(build_result(result, NULL)));
+		}
+	else if (!strcmp(api_action, "service.ack")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		if (service_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Service name not given.");
+			}
+		int result = cmd_submitf(CMD_ACKNOWLEDGE_SVC_PROBLEM, "%s;%s;%d;%d;%d;%s;%s", host_name, service_name, (sticky == TRUE) ? ACKNOWLEDGEMENT_STICKY : ACKNOWLEDGEMENT_NORMAL, send_notification, persistent_comment, comment_author, comment_data);
+		printf("%s", json_object_to_json_string(build_result(result, NULL)));
 		}
 	else if (!strcmp(api_action, "host.get")) {
 		if (host_name == NULL) {
@@ -231,6 +265,29 @@ int process_cgivars(void) {
 			strip_html_brackets(service_name);
 			}
 
+		else if(!strcmp(variables[x], "sticky")) {
+			sticky = TRUE;
+			}
+
+		else if(!strcmp(variables[x], "send_notification")) {
+			send_notification = TRUE;
+			}
+
+		else if(!strcmp(variables[x], "persistent_comment")) {
+			persistent_comment = TRUE;
+			}
+
+		else if(!strcmp(variables[x], "comment_data")) {
+			x++;
+			if(variables[x] == NULL) {
+				error = TRUE;
+				break;
+				}
+
+			comment_data = strdup(variables[x]);
+			strip_html_brackets(comment_data);
+			}
+
 		}
 
 	/* free memory allocated to the CGI variables */
@@ -295,4 +352,88 @@ json_object *service_to_json(servicestatus *s) {
 	json_object_object_add(jout, "scheduled_downtime_depth", json_object_new_int(s->scheduled_downtime_depth));
 	return jout;
 }
+
+
+json_object *build_result(int code, char *comment) {
+	json_object *jout = json_object_new_object();
+	json_object_object_add(jout, "code", json_object_new_int(code));
+	switch (code) {
+		case OK:
+			json_object_object_add(jout, "result", json_object_new_string("OK"));
+			break;
+		case ERROR:
+			json_object_object_add(jout, "result", json_object_new_string("ERROR"));
+			break;
+		default:
+			json_object_object_add(jout, "result", json_object_new_string("UNKNOWN"));
+			break;
+	}
+	if (comment) json_object_object_add(jout, "comment", json_object_new_string(comment));
+	return jout;
+}
+
+
+__attribute__((format(printf, 2, 3)))
+static int cmd_submitf(int id, const char *fmt, ...) {
+	char cmd[MAX_EXTERNAL_COMMAND_LENGTH];
+	const char *command;
+	int len, len2;
+	va_list ap;
+
+	command = extcmd_get_name(id);
+	/*
+	 * We disallow sending 'CHANGE' commands from the cgi's
+	 * until we do proper session handling to prevent cross-site
+	 * request forgery
+	 */
+	if(!command || (strlen(command) > 6 && !memcmp("CHANGE", command, 6)))
+		return ERROR;
+
+	len = snprintf(cmd, sizeof(cmd) - 1, "[%lu] %s;", time(NULL), command);
+	if(len < 0)
+		return ERROR;
+
+	if(fmt) {
+		va_start(ap, fmt);
+		len2 = vsnprintf(&cmd[len], sizeof(cmd) - len - 1, fmt, ap);
+		va_end(ap);
+		if(len2 < 0)
+			return ERROR;
+		}
+
+	return write_command_to_file(cmd);
+	}
+
+int write_command_to_file(char *cmd) {
+	FILE *fp;
+	struct stat statbuf;
+
+	/*
+	* Commands are not allowed to have newlines in them, as
+	* that allows malicious users to hand-craft requests that
+	* bypass the access-restrictions.
+	*/
+	if(!cmd || !*cmd || strchr(cmd, '\n'))
+		return ERROR;
+
+	/* bail out if the external command file doesn't exist */
+	if(stat(command_file, &statbuf)) {
+		return ERROR;
+		}
+
+	/* open the command for writing (since this is a pipe, it will really be appended) */
+	fp = fopen(command_file, "w");
+	if(fp == NULL) {
+		return ERROR;
+		}
+
+	/* write the command to file */
+	fprintf(fp, "%s\n", cmd);
+
+	/* flush buffer */
+	fflush(fp);
+	fclose(fp);
+
+	return OK;
+	}
 

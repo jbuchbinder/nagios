@@ -128,7 +128,7 @@ $(SRC_COMMON)/shared.o: $(SRC_COMMON)/shared.c
 ########## CGIS ##########
 
 api.cgi: api.c $(CGIDEPS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ api.c $(CGILIBS) $(LIBS) $(JSONC_SOURCES)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ api.c $(CGILIBS) $(LIBS) $(JSONC_SOURCES) extcmd_list.c
 
 avail.cgi: avail.c $(CGIDEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ avail.c $(CGILIBS) $(LIBS)
