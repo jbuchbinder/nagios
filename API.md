@@ -25,3 +25,11 @@ API
 
 	Acknowledge a service problem.
 
+* `api.cgi?action=host.notifications&host=HOSTNAME&enable=0`
+
+	Enable or disable host notifications.
+
+* `api.cgi?action=service.notifications&host=HOSTNAME&service=SERVICENAME&enable=0`
+
+	Enable or disable service notifications.
+

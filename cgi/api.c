@@ -77,6 +77,7 @@ int show_all_hosts = TRUE;
 int show_all_hostgroups = TRUE;
 int show_all_servicegroups = TRUE;
 int sticky = FALSE;
+int enable = -1;
 int send_notification = FALSE;
 int persistent_comment = FALSE;
 char *comment_author = NULL;
@@ -188,6 +189,29 @@ int main(void) {
 		int result = cmd_submitf(CMD_ACKNOWLEDGE_HOST_PROBLEM, "%s;%d;%d;%d;%s;%s", host_name, (sticky == TRUE) ? ACKNOWLEDGEMENT_STICKY : ACKNOWLEDGEMENT_NORMAL, send_notification, persistent_comment, comment_author, comment_data);
 		printf("%s", json_object_to_json_string(build_result(result, NULL)));
 		}
+	else if (!strcmp(api_action, "host.notifications")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		if (enable == -1) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Enable not given.");
+			}
+		int result = cmd_submitf(enable ? CMD_ENABLE_HOST_NOTIFICATIONS : CMD_DISABLE_HOST_NOTIFICATIONS, "%s", host_name);
+		printf("%s", json_object_to_json_string(build_result(result, NULL)));
+		}
+	else if (!strcmp(api_action, "service.notifications")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		if (service_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Service name not given.");
+			}
+		if (enable == -1) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Enable not given.");
+			}
+		int result = cmd_submitf(enable ? CMD_ENABLE_SVC_NOTIFICATIONS : CMD_DISABLE_SVC_NOTIFICATIONS, "%s;%s", host_name, service_name);
+		printf("%s", json_object_to_json_string(build_result(result, NULL)));
+		}
 	else if (!strcmp(api_action, "service.ack")) {
 		if (host_name == NULL) {
 			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
@@ -214,6 +238,10 @@ int main(void) {
 	return OK;
 	}
 
+
+#define PROCESS_CGIVARS_TRUE_FALSE( X ) x++; \
+	if (variables[x] == NULL) { error = TRUE; break; } \
+	if (!strcmp(variables[x], "0")) { X = FALSE; } else { X = TRUE; } 
 
 int process_cgivars(void) {
 	char **variables;
@@ -265,16 +293,20 @@ int process_cgivars(void) {
 			strip_html_brackets(service_name);
 			}
 
+		else if(!strcmp(variables[x], "enable")) {
+			PROCESS_CGIVARS_TRUE_FALSE(enable)
+			}
+
 		else if(!strcmp(variables[x], "sticky")) {
-			sticky = TRUE;
+			PROCESS_CGIVARS_TRUE_FALSE(sticky)
 			}
 
 		else if(!strcmp(variables[x], "send_notification")) {
-			send_notification = TRUE;
+			PROCESS_CGIVARS_TRUE_FALSE(send_notification)
 			}
 
 		else if(!strcmp(variables[x], "persistent_comment")) {
-			persistent_comment = TRUE;
+			PROCESS_CGIVARS_TRUE_FALSE(persistent_comment)
 			}
 
 		else if(!strcmp(variables[x], "comment_data")) {
