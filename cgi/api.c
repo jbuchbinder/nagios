@@ -182,6 +182,17 @@ int main(void) {
 		json_object *jout = service_to_json(s);
 		printf("%s", json_object_to_json_string(jout));
 		}
+	else if (!strcmp(api_action, "service.problems")) {
+		servicestatus *temp_servicestatus = NULL;
+		json_object *jout = json_object_new_array();
+		for (temp_servicestatus = servicestatus_list; temp_servicestatus != NULL; temp_servicestatus = temp_servicestatus->next) {
+			if (temp_servicestatus->status == SERVICE_CRITICAL || temp_servicestatus->status == SERVICE_WARNING || temp_servicestatus->status == SERVICE_UNKNOWN) {
+				json_object *jitem = service_to_json(temp_servicestatus);
+				json_object_array_add(jout, jitem);
+				}
+			}
+		printf("%s", json_object_to_json_string(jout));
+		}
 	else if (!strcmp(api_action, "host.ack")) {
 		if (host_name == NULL) {
 			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");

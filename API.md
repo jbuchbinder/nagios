@@ -33,3 +33,7 @@ API
 
 	Enable or disable service notifications.
 
+* `api.cgi?action=service.problems`
+
+	Get all service issues.
+
