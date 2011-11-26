@@ -1,6 +1,10 @@
 API
 ===
 
+* `api.cgi?action=api.methods`
+
+	Get list of supported API methods.
+
 * `api.cgi?action=host.list`
 
 	Get list of hosts.

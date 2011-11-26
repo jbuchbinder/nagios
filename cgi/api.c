@@ -91,6 +91,28 @@ time_t start_time = 0L;
 unsigned long host_properties = 0L;
 unsigned long service_properties = 0L;
 
+char *api_methods[] = {
+	  "api.methods"
+
+	  /* Host methods */
+	, "host.ack"
+	, "host.get"
+	, "host.list"
+	, "host.notifications"
+	, "host.schedule"
+	, "host.services"
+
+	  /* Service methods */
+	, "service.ack"
+	, "service.get"
+	, "service.list"
+	, "service.notifications"
+	, "service.problems"
+	, "service.schedule"
+
+	, NULL
+};
+
 #define RETURN_API_ERROR(code, text) { \
 	printf("{\"response_type\":\"ERROR\",\"error_code\":%d,\"error_message\":\"%s\"}\n", code, text); \
         free_memory(); \
@@ -266,6 +288,14 @@ int main(void) {
 			}
 		host *s = find_host(host_name);
 		json_object *jout = host_to_json(s);
+		printf("%s", json_object_to_json_string(jout));
+		}
+	else if (!strcmp(api_action, "api.methods")) {
+		json_object *jout = json_object_new_array();
+		int i;
+		for (i=0; api_methods[i] != NULL; i++) {
+			json_object_array_add(jout, json_object_new_string(api_methods[i]));
+			}
 		printf("%s", json_object_to_json_string(jout));
 		}
 
