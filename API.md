@@ -17,6 +17,14 @@ API
 
 	Get detail for a single service.
 
+* `api.cgi?action=host.schedule&host=HOSTNAME&service=SERVICENAME[&start_time=TIME]
+
+	Reschedule a host check.
+
+* `api.cgi?action=service.schedule&host=HOSTNAME&service=SERVICENAME[&start_time=TIME]
+
+	Reschedule a service check.
+
 * `api.cgi?action=host.ack&host=HOSTNAME[&sticky=1][&send_notification=1][&persistent_comment=1][&comment_data=COMMENT]`
 
 	Acknowledge a host problem.

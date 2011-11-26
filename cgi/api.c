@@ -45,6 +45,7 @@ extern hostgroup *hostgroup_list;
 extern servicegroup *servicegroup_list;
 extern hoststatus *hoststatus_list;
 extern servicestatus *servicestatus_list;
+extern int date_format;
 
 static nagios_macros *mac;
 
@@ -61,6 +62,7 @@ json_object *host_to_json(host *h);
 json_object *build_result(int code, char *comment);
 __attribute__((format(printf, 2, 3))) static int cmd_submitf(int id, const char *fmt, ...);
 int write_command_to_file(char *cmd);
+int string_to_time(char *buffer, time_t *t);
 
 authdata current_authdata;
 time_t current_time;
@@ -82,6 +84,9 @@ int send_notification = FALSE;
 int persistent_comment = FALSE;
 char *comment_author = NULL;
 char *comment_data = NULL;
+
+char *start_time_string = "";
+time_t start_time = 0L;
 
 unsigned long host_properties = 0L;
 unsigned long service_properties = 0L;
@@ -122,6 +127,11 @@ int main(void) {
 	result = read_main_config_file(main_config_file);
 	if(result == ERROR) {
 		RETURN_API_ERROR(STATUS_API_ERROR_SETUP, "Error reading config file");
+		}
+
+	/* This requires the date_format parameter in the main config file */
+	if(strcmp(start_time_string, "")) {
+		string_to_time(start_time_string, &start_time);
 		}
 
 	/* read all object configuration data */
@@ -208,6 +218,23 @@ int main(void) {
 			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Enable not given.");
 			}
 		int result = cmd_submitf(enable ? CMD_ENABLE_HOST_NOTIFICATIONS : CMD_DISABLE_HOST_NOTIFICATIONS, "%s", host_name);
+		printf("%s", json_object_to_json_string(build_result(result, NULL)));
+		}
+	else if (!strcmp(api_action, "host.schedule")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		int result = cmd_submitf(CMD_SCHEDULE_FORCED_HOST_CHECK, "%s;%lu", host_name, start_time);
+		printf("%s", json_object_to_json_string(build_result(result, NULL)));
+		}
+	else if (!strcmp(api_action, "service.schedule")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		if (service_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Service name not given.");
+			}
+		int result = cmd_submitf(CMD_SCHEDULE_FORCED_SVC_CHECK, "%s;%s;%lu", host_name, service_name, start_time);
 		printf("%s", json_object_to_json_string(build_result(result, NULL)));
 		}
 	else if (!strcmp(api_action, "service.notifications")) {
@@ -302,6 +329,21 @@ int process_cgivars(void) {
 
 			service_name = strdup(variables[x]);
 			strip_html_brackets(service_name);
+			}
+
+		/* we found the start time */
+		else if(!strcmp(variables[x], "start_time")) {
+			x++;
+			if(variables[x] == NULL) {
+				error = TRUE;
+				break;
+				}
+
+			start_time_string = (char *)malloc(strlen(variables[x]) + 1);
+			if (start_time_string == NULL) {
+				start_time_string = NULL;
+			} else 
+				strcpy(start_time_string, variables[x]);
 			}
 
 		else if(!strcmp(variables[x], "enable")) {
@@ -476,6 +518,44 @@ int write_command_to_file(char *cmd) {
 	/* flush buffer */
 	fflush(fp);
 	fclose(fp);
+
+	return OK;
+	}
+
+int string_to_time(char *buffer, time_t *t) {
+	struct tm lt;
+	int ret = 0;
+
+	if (buffer == NULL) {
+		t = &current_time;
+		return OK;
+		}
+
+	lt.tm_mon = 0;
+	lt.tm_mday = 1;
+	lt.tm_year = 1900;
+	lt.tm_hour = 0;
+	lt.tm_min = 0;
+	lt.tm_sec = 0;
+	lt.tm_wday = 0;
+	lt.tm_yday = 0;
+
+	if(date_format == DATE_FORMAT_EURO)
+		ret = sscanf(buffer, "%02d-%02d-%04d %02d:%02d:%02d", &lt.tm_mday, &lt.tm_mon, &lt.tm_year, &lt.tm_hour, &lt.tm_min, &lt.tm_sec);
+	else if(date_format == DATE_FORMAT_ISO8601 || date_format == DATE_FORMAT_STRICT_ISO8601)
+		ret = sscanf(buffer, "%04d-%02d-%02d%*[ T]%02d:%02d:%02d", &lt.tm_year, &lt.tm_mon, &lt.tm_mday, &lt.tm_hour, &lt.tm_min, &lt.tm_sec);
+	else
+		ret = sscanf(buffer, "%02d-%02d-%04d %02d:%02d:%02d", &lt.tm_mon, &lt.tm_mday, &lt.tm_year, &lt.tm_hour, &lt.tm_min, &lt.tm_sec);
+
+	if(ret != 6)
+		return ERROR;
+
+	lt.tm_mon--;
+	lt.tm_year -= 1900;
+
+	lt.tm_isdst = -1;
+
+	*t = mktime(&lt);
 
 	return OK;
 	}
