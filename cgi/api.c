@@ -870,7 +870,10 @@ history_to_json( host *s ) {
 
 		temp_buffer = strtok(NULL, "\n");
 
-		/* Form service history description properly */
+		/* Form host/service history description properly */
+		if (history_type == HOST_HISTORY && !strcmp(description, "")) {
+			strcpy(description, temp_buffer + 1);
+			}
 		if (history_type == SERVICE_HISTORY && !strcmp(description, "")) {
 			//temp_service = find_service(entry_host_name, entry_service_desc);
 			//sprintf(description, "%s [%s]: %s", temp_service->host_name, temp_service->display_name, temp_buffer);
