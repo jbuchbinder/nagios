@@ -49,3 +49,7 @@ API
 
 	Get all service issues.
 
+* `api.cgi?action=host.gangliaevents&host=HOSTNAME[&service=SERVICENAME][&start_time=STARTTIME][&end_time=ENDTIME]`
+
+	Get Ganglia event format JSON output for events matching criteria.
+

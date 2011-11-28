@@ -51,6 +51,13 @@ static nagios_macros *mac;
 
 #define MAX_MESSAGE_BUFFER		4096
 
+#define SERVICE_HISTORY                 0
+#define HOST_HISTORY                    1
+#define SERVICE_FLAPPING_HISTORY        2
+#define HOST_FLAPPING_HISTORY           3
+#define SERVICE_DOWNTIME_HISTORY        4
+#define HOST_DOWNTIME_HISTORY           5
+
 #define DISPLAY_HOSTS			0
 #define DISPLAY_HOSTGROUPS		1
 #define DISPLAY_SERVICEGROUPS           2
@@ -63,6 +70,7 @@ json_object *build_result(int code, char *comment);
 __attribute__((format(printf, 2, 3))) static int cmd_submitf(int id, const char *fmt, ...);
 int write_command_to_file(char *cmd);
 int string_to_time(char *buffer, time_t *t);
+json_object * history_to_json(host *s);
 
 authdata current_authdata;
 time_t current_time;
@@ -78,6 +86,9 @@ int host_alert = FALSE;
 int show_all_hosts = TRUE;
 int show_all_hostgroups = TRUE;
 int show_all_servicegroups = TRUE;
+int display_system_messages = FALSE;
+int display_flapping_alerts = FALSE;
+int display_downtime_alerts = TRUE;
 int sticky = FALSE;
 int enable = -1;
 int send_notification = FALSE;
@@ -86,7 +97,9 @@ char *comment_author = NULL;
 char *comment_data = NULL;
 
 char *start_time_string = "";
+char *end_time_string = "";
 time_t start_time = 0L;
+time_t end_time = 0L;
 
 unsigned long host_properties = 0L;
 unsigned long service_properties = 0L;
@@ -154,6 +167,9 @@ int main(void) {
 	/* This requires the date_format parameter in the main config file */
 	if(strcmp(start_time_string, "")) {
 		string_to_time(start_time_string, &start_time);
+		}
+	if(strcmp(end_time_string, "")) {
+		string_to_time(end_time_string, &end_time);
 		}
 
 	/* read all object configuration data */
@@ -290,6 +306,14 @@ int main(void) {
 		json_object *jout = host_to_json(s);
 		printf("%s", json_object_to_json_string(jout));
 		}
+	else if (!strcmp(api_action, "host.gangliaevents")) {
+		if (host_name == NULL) {
+			RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "Host name not given.");
+			}
+		host *s = find_host(host_name);
+		json_object *jout = history_to_json(s);
+		printf("%s", json_object_to_json_string(jout));
+		}
 	else if (!strcmp(api_action, "api.methods")) {
 		json_object *jout = json_object_new_array();
 		int i;
@@ -374,6 +398,20 @@ int process_cgivars(void) {
 				start_time_string = NULL;
 			} else 
 				strcpy(start_time_string, variables[x]);
+			}
+
+		else if(!strcmp(variables[x], "end_time")) {
+			x++;
+			if(variables[x] == NULL) {
+				error = TRUE;
+				break;
+				}
+
+			end_time_string = (char *)malloc(strlen(variables[x]) + 1);
+			if (end_time_string == NULL) {
+				end_time_string = NULL;
+			} else 
+				strcpy(end_time_string, variables[x]);
 			}
 
 		else if(!strcmp(variables[x], "enable")) {
@@ -570,6 +608,12 @@ int string_to_time(char *buffer, time_t *t) {
 	lt.tm_wday = 0;
 	lt.tm_yday = 0;
 
+	/* Handle seconds since epoch format */
+	if(atol(buffer) > 500000000) {
+		*t = (time_t) atol(buffer);
+		return OK;
+		}
+
 	if(date_format == DATE_FORMAT_EURO)
 		ret = sscanf(buffer, "%02d-%02d-%04d %02d:%02d:%02d", &lt.tm_mday, &lt.tm_mon, &lt.tm_year, &lt.tm_hour, &lt.tm_min, &lt.tm_sec);
 	else if(date_format == DATE_FORMAT_ISO8601 || date_format == DATE_FORMAT_STRICT_ISO8601)
@@ -588,5 +632,287 @@ int string_to_time(char *buffer, time_t *t) {
 	*t = mktime(&lt);
 
 	return OK;
+	}
+
+json_object *
+history_to_json( host *s ) {
+	// json_object_array_add(jout, jitem);
+	int rc = 0;
+	json_object *o = json_object_new_array();
+
+	/* Parsing variables */
+	char description[MAX_INPUT_BUFFER];
+	char date_time[MAX_DATETIME_LENGTH];
+	char *input = NULL;
+	char *input2 = NULL;
+	char *temp_buffer = NULL;
+	char *entry_host_name = NULL;
+	char *entry_service_desc = NULL;
+	host *temp_host = NULL;
+	service *temp_service = NULL;
+	int history_type = SERVICE_HISTORY;
+	int history_detail_type = HISTORY_SERVICE_CRITICAL;
+	time_t t;
+	struct tm *time_ptr = NULL;
+	int system_message = FALSE;
+	char current_message_date[MAX_INPUT_BUFFER] = "";
+
+	char log_file_to_use[MAX_FILENAME_LENGTH];
+	int log_archive = 0;
+	get_log_archive_to_use(log_archive, log_file_to_use, (int)sizeof(log_file_to_use));
+	rc = read_file_into_lifo(log_file_to_use);
+	if (rc != LIFO_OK) {
+		if (rc == LIFO_ERROR_MEMORY) {
+			RETURN_API_ERROR(STATUS_API_ERROR_SETUP, "Insufficient memory");
+		} else if (rc == LIFO_ERROR_FILE) {
+			RETURN_API_ERROR(STATUS_API_ERROR_SETUP, "Error reading log file");
+			}
+		}
+
+	while (1) {
+
+		my_free(input);
+		my_free(input2);
+
+		if ((input = pop_lifo()) == NULL) break;
+
+		strip(input);
+
+		strcpy(description, "");
+		system_message = FALSE;
+
+		if ((input2 = (char *)strdup(input)) == NULL) continue;
+
+		/* service state alerts */
+		if(strstr(input, "SERVICE ALERT:")) {
+
+			history_type = SERVICE_HISTORY;
+
+			/* get host and service names */
+			temp_buffer = my_strtok(input2, "]");
+			temp_buffer = my_strtok(NULL, ":");
+			temp_buffer = my_strtok(NULL, ";");
+			if(temp_buffer)
+				entry_host_name = strdup(temp_buffer + 1);
+			else
+				entry_host_name = NULL;
+			temp_buffer = my_strtok(NULL, ";");
+			if(temp_buffer)
+				entry_service_desc = strdup(temp_buffer);
+			else
+				entry_service_desc = NULL;
+
+			if (strstr(input, ";CRITICAL;")) {
+				history_detail_type = HISTORY_SERVICE_CRITICAL;
+				}
+			else if (strstr(input, ";WARNING;")) {
+				history_detail_type = HISTORY_SERVICE_WARNING;
+				}
+			else if (strstr(input, ";UNKNOWN;")) {
+				history_detail_type = HISTORY_SERVICE_UNKNOWN;
+				}
+			else if (strstr(input, ";RECOVERY;") || strstr(input, ";OK;")) {
+				history_detail_type = HISTORY_SERVICE_RECOVERY;
+				}
+
+                        }
+		/* service flapping alerts */
+		else if (strstr(input, "SERVICE FLAPPING ALERT:")) {
+
+			if(display_flapping_alerts == FALSE) continue;
+
+			history_type = SERVICE_FLAPPING_HISTORY;
+
+			/* get host and service names */
+			temp_buffer = my_strtok(input2, "]");
+			temp_buffer = my_strtok(NULL, ":");
+			temp_buffer = my_strtok(NULL, ";");
+			if(temp_buffer)
+				entry_host_name = strdup(temp_buffer + 1);
+			else
+				entry_host_name = NULL;
+			temp_buffer = my_strtok(NULL, ";");
+			if(temp_buffer)
+				entry_service_desc = strdup(temp_buffer);
+			else
+				entry_service_desc = NULL;
+
+			if(strstr(input, ";STARTED;"))
+				strncpy(description, "Service started flapping", sizeof(description));
+			else if(strstr(input, ";STOPPED;"))
+				strncpy(description, "Service stopped flapping", sizeof(description));
+			else if(strstr(input, ";DISABLED;"))
+				strncpy(description, "Service flap detection disabled", sizeof(description));
+                        }
+
+		/* service downtime alerts */
+		else if(strstr(input, "SERVICE DOWNTIME ALERT:")) {
+
+			if(display_downtime_alerts == FALSE) continue;
+
+			history_type = SERVICE_DOWNTIME_HISTORY;
+
+			/* get host and service names */
+			temp_buffer = my_strtok(input2, "]");
+			temp_buffer = my_strtok(NULL, ":");
+			temp_buffer = my_strtok(NULL, ";");
+			if(temp_buffer)
+				entry_host_name = strdup(temp_buffer + 1);
+			else
+				entry_host_name = NULL;
+			temp_buffer = my_strtok(NULL, ";");
+
+			if (temp_buffer)
+				entry_service_desc = strdup(temp_buffer);
+			else
+				entry_service_desc = NULL;
+
+			if(strstr(input, ";STARTED;"))
+				strncpy(description, "Service entered a period of scheduled downtime", sizeof(description));
+			else if(strstr(input, ";STOPPED;"))
+				strncpy(description, "Service exited from a period of scheduled downtime", sizeof(description));
+			else if(strstr(input, ";CANCELLED;"))
+				strncpy(description, "Service scheduled downtime has been cancelled", sizeof(description));
+                        }
+
+		/* host state alerts */
+		else if(strstr(input, "HOST ALERT:")) {
+
+			history_type = HOST_HISTORY;
+
+			/* get host name */
+			temp_buffer = my_strtok(input2, "]");
+			temp_buffer = my_strtok(NULL, ":");
+			temp_buffer = my_strtok(NULL, ";");
+			if(temp_buffer)
+				entry_host_name = strdup(temp_buffer + 1);
+			else
+				entry_host_name = NULL;
+
+			if(strstr(input, ";DOWN;")) {
+				history_detail_type = HISTORY_HOST_DOWN;
+				}
+			else if(strstr(input, ";UNREACHABLE;")) {
+				history_detail_type = HISTORY_HOST_UNREACHABLE;
+				}
+			else if(strstr(input, ";RECOVERY") || strstr(input, ";UP;")) {
+				history_detail_type = HISTORY_HOST_RECOVERY;
+				}
+			}
+		/* host flapping alerts */
+		else if(strstr(input, "HOST FLAPPING ALERT:")) {
+
+			if(display_flapping_alerts == FALSE) continue;
+
+			history_type = HOST_FLAPPING_HISTORY;
+
+			/* get host name */
+			temp_buffer = my_strtok(input2, "]");
+			temp_buffer = my_strtok(NULL, ":");
+			temp_buffer = my_strtok(NULL, ";");
+			if(temp_buffer)
+				entry_host_name = strdup(temp_buffer + 1);
+			else
+				entry_host_name = NULL;
+
+			if(strstr(input, ";STARTED;"))
+				strncpy(description, "Host started flapping", sizeof(description));
+			else if(strstr(input, ";STOPPED;"))
+				strncpy(description, "Host stopped flapping", sizeof(description));
+			else if(strstr(input, ";DISABLED;"))
+				strncpy(description, "Host flap detection disabled", sizeof(description));
+			}
+
+		/* host downtime alerts */
+		else if(strstr(input, "HOST DOWNTIME ALERT:")) {
+
+			if(display_downtime_alerts == FALSE) continue;
+
+			history_type = HOST_DOWNTIME_HISTORY;
+
+			/* get host name */
+			temp_buffer = my_strtok(input2, "]");
+			temp_buffer = my_strtok(NULL, ":");
+			temp_buffer = my_strtok(NULL, ";");
+			if(temp_buffer)
+				entry_host_name = strdup(temp_buffer + 1);
+			else
+				entry_host_name = NULL;
+
+			if(strstr(input, ";STARTED;"))
+				strncpy(description, "Host entered a period of scheduled downtime", sizeof(description));
+			else if(strstr(input, ";STOPPED;"))
+				strncpy(description, "Host exited from a period of scheduled downtime", sizeof(description));
+			else if(strstr(input, ";CANCELLED;"))
+				strncpy(description, "Host scheduled downtime has been cancelled", sizeof(description));
+			}
+
+		else if(display_system_messages == FALSE) continue;
+
+		/* Don't push out "soft" status changes */
+		if (strstr(input, ";SOFT;")) continue;
+
+		description[sizeof(description) - 1] = '\x0';
+
+		/* get the timestamp */
+		temp_buffer = strtok(input, "]");
+		t = (temp_buffer == NULL) ? 0L : strtoul(temp_buffer + 1, NULL, 10);
+		time_ptr = localtime(&t);
+		strftime(current_message_date, sizeof(current_message_date), "%B %d, %Y %H:00\n", time_ptr);
+		current_message_date[sizeof(current_message_date) - 1] = '\x0';
+
+		get_time_string(&t, date_time, sizeof(date_time), SHORT_DATE_TIME);
+		strip(date_time);
+
+		/* Ignore all out of range stuff, if specified */
+		if (start_time != 0L && t < start_time) continue;
+		if (end_time   != 0L && t > end_time  ) continue;
+
+		temp_buffer = strtok(NULL, "\n");
+
+		/* Form service history description properly */
+		if (history_type == SERVICE_HISTORY && !strcmp(description, "")) {
+			//temp_service = find_service(entry_host_name, entry_service_desc);
+			//sprintf(description, "%s [%s]: %s", temp_service->host_name, temp_service->display_name, temp_buffer);
+			strcpy(description, temp_buffer + 1);
+			}
+
+		if (strcmp(description, "")) {
+			if (system_message == FALSE) {
+				if(history_type == HOST_HISTORY || history_type == HOST_FLAPPING_HISTORY || history_type == HOST_DOWNTIME_HISTORY) {
+					temp_host = find_host(entry_host_name);
+					if (strcmp(temp_host->name, s->name)) continue;
+					//if (temp_host != s) continue;
+					json_object *entry = json_object_new_object();
+					json_object_object_add(entry, "event_id", json_object_new_int(t));
+					json_object_object_add(entry, "host_regex", json_object_new_string(temp_host->name));
+					json_object_object_add(entry, "summary", json_object_new_string(description));
+					json_object_object_add(entry, "grid", json_object_new_string("*"));
+					json_object_object_add(entry, "cluster", json_object_new_string("*"));
+					json_object_object_add(entry, "start_time", json_object_new_int(t));
+					json_object_object_add(entry, "end_time", json_object_new_int(t));
+					json_object_array_add(o, entry);
+				} else {
+					temp_host = find_host(entry_host_name);
+					//if (temp_host != s) continue;
+					temp_service = find_service(entry_host_name, entry_service_desc);
+					if (service_name != NULL && strcmp(temp_service->display_name, service_name)) continue;
+					if (strcmp(temp_host->name, s->name)) continue;
+					json_object *entry = json_object_new_object();
+					json_object_object_add(entry, "event_id", json_object_new_int(t));
+					json_object_object_add(entry, "host_regex", json_object_new_string(temp_host->name));
+					json_object_object_add(entry, "summary", json_object_new_string(description));
+					json_object_object_add(entry, "grid", json_object_new_string("*"));
+					json_object_object_add(entry, "cluster", json_object_new_string("*"));
+					json_object_object_add(entry, "start_time", json_object_new_int(t));
+					json_object_object_add(entry, "end_time", json_object_new_int(t));
+					json_object_array_add(o, entry);
+					}
+				}
+			}
+
+		}
+
+	return o;
 	}
 
