@@ -197,6 +197,11 @@ int main(void) {
 	else
 		comment_author = current_authdata.username;
 
+	/* Error out if someone has left out the 'api_action' parameter. */
+	if (api_action == NULL) {
+		RETURN_API_ERROR(STATUS_API_ERROR_PARAM, "API action parameter not present.");
+		}
+
 	/* perform actions here */
 	if (!strcmp(api_action, "host.list")) {
 		json_object *jout = json_object_new_array();
