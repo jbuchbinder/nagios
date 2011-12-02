@@ -93,6 +93,7 @@ int sticky = FALSE;
 int enable = -1;
 int send_notification = FALSE;
 int persistent_comment = FALSE;
+int only_active = FALSE;
 char *comment_author = NULL;
 char *comment_data = NULL;
 
@@ -240,8 +241,10 @@ int main(void) {
 		json_object *jout = json_object_new_array();
 		for (temp_servicestatus = servicestatus_list; temp_servicestatus != NULL; temp_servicestatus = temp_servicestatus->next) {
 			if (temp_servicestatus->status == SERVICE_CRITICAL || temp_servicestatus->status == SERVICE_WARNING || temp_servicestatus->status == SERVICE_UNKNOWN) {
-				json_object *jitem = service_to_json(temp_servicestatus);
-				json_object_array_add(jout, jitem);
+        if ( !only_active || ( !temp_servicestatus->problem_has_been_acknowledged && temp_servicestatus->notifications_enabled ) ) {
+			  	json_object *jitem = service_to_json(temp_servicestatus);
+				  json_object_array_add(jout, jitem);
+          }
 				}
 			}
 		printf("%s", json_object_to_json_string(jout));
@@ -435,6 +438,10 @@ int process_cgivars(void) {
 			PROCESS_CGIVARS_TRUE_FALSE(persistent_comment)
 			}
 
+		else if(!strcmp(variables[x], "only_active")) {
+			PROCESS_CGIVARS_TRUE_FALSE(only_active)
+			}
+
 		else if(!strcmp(variables[x], "comment_data")) {
 			x++;
 			if(variables[x] == NULL) {
@@ -485,6 +492,7 @@ json_object *host_to_json(host *h) {
 
 json_object *service_to_json(servicestatus *s) {
 	json_object *jout = json_object_new_object();
+  service *service = find_service(s->host_name, s->description);
 	json_object_object_add(jout, "host", json_object_new_string(s->host_name));
 	json_object_object_add(jout, "service", json_object_new_string(s->description));
 	if (s->status == SERVICE_CRITICAL) {
@@ -501,6 +509,9 @@ json_object *service_to_json(servicestatus *s) {
 		}
 	if (s->plugin_output) json_object_object_add(jout, "plugin_output", json_object_new_string(s->plugin_output));
 	if (s->long_plugin_output) json_object_object_add(jout, "long_plugin_output", json_object_new_string(s->long_plugin_output));
+	if (service->notes) json_object_object_add(jout, "notes", json_object_new_string(service->notes));
+	if (service->notes_url) json_object_object_add(jout, "notes_url", json_object_new_string(service->notes_url));
+	if (service->action_url) json_object_object_add(jout, "action_url", json_object_new_string(service->action_url));
 	json_object_object_add(jout, "acknowledged", json_object_new_int(s->problem_has_been_acknowledged));
 	json_object_object_add(jout, "current_attempt", json_object_new_int(s->current_attempt));
 	json_object_object_add(jout, "max_attempts", json_object_new_int(s->max_attempts));

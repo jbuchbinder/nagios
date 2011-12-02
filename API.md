@@ -45,7 +45,7 @@ API
 
 	Enable or disable service notifications.
 
-* `api.cgi?action=service.problems`
+* `api.cgi?action=service.problems[&only_active=1]`
 
 	Get all service issues.
 
