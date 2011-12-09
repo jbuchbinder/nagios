@@ -21,11 +21,11 @@ API
 
 	Get detail for a single service.
 
-* `api.cgi?action=host.schedule&host=HOSTNAME&service=SERVICENAME[&start_time=TIME]
+* `api.cgi?action=host.schedule&host=HOSTNAME&service=SERVICENAME[&start_time=TIME]`
 
 	Reschedule a host check.
 
-* `api.cgi?action=service.schedule&host=HOSTNAME&service=SERVICENAME[&start_time=TIME]
+* `api.cgi?action=service.schedule&host=HOSTNAME&service=SERVICENAME[&start_time=TIME]`
 
 	Reschedule a service check.
 
