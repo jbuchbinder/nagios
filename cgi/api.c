@@ -241,7 +241,7 @@ int main(void) {
 		json_object *jout = json_object_new_array();
 		for (temp_servicestatus = servicestatus_list; temp_servicestatus != NULL; temp_servicestatus = temp_servicestatus->next) {
 			if (temp_servicestatus->status == SERVICE_CRITICAL || temp_servicestatus->status == SERVICE_WARNING || temp_servicestatus->status == SERVICE_UNKNOWN) {
-        if ( !only_active || ( !temp_servicestatus->problem_has_been_acknowledged && temp_servicestatus->notifications_enabled ) ) {
+        if ( !only_active || ( !temp_servicestatus->problem_has_been_acknowledged && temp_servicestatus->notifications_enabled && temp_servicestatus->scheduled_downtime_depth == 0 ) ) {
 			  	json_object *jitem = service_to_json(temp_servicestatus);
 				  json_object_array_add(jout, jitem);
           }
