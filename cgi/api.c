@@ -240,11 +240,12 @@ int main(void) {
 		servicestatus *temp_servicestatus = NULL;
 		json_object *jout = json_object_new_array();
 		for (temp_servicestatus = servicestatus_list; temp_servicestatus != NULL; temp_servicestatus = temp_servicestatus->next) {
+			hoststatus *temp_hoststatus = find_hoststatus(temp_servicestatus->host_name);
 			if (temp_servicestatus->status == SERVICE_CRITICAL || temp_servicestatus->status == SERVICE_WARNING || temp_servicestatus->status == SERVICE_UNKNOWN) {
-        if ( !only_active || ( !temp_servicestatus->problem_has_been_acknowledged && temp_servicestatus->notifications_enabled && temp_servicestatus->scheduled_downtime_depth == 0 ) ) {
-			  	json_object *jitem = service_to_json(temp_servicestatus);
-				  json_object_array_add(jout, jitem);
-          }
+				if ( !only_active || ( !temp_servicestatus->problem_has_been_acknowledged && temp_servicestatus->notifications_enabled && temp_servicestatus->scheduled_downtime_depth == 0 && !temp_hoststatus->problem_has_been_acknowledged && temp_hoststatus->notifications_enabled && temp_hoststatus->scheduled_downtime_depth == 0 ) ) {
+			  		json_object *jitem = service_to_json(temp_servicestatus);
+					json_object_array_add(jout, jitem);
+          				}
 				}
 			}
 		printf("%s", json_object_to_json_string(jout));
