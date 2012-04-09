@@ -1,6 +1,6 @@
 %define name nagios
 %define version 3.3.1
-%define release 1
+%define release 1.api.0
 %define nsusr nagios
 %define nsgrp nagios
 %define cmdgrp nagiocmd
