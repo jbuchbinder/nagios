@@ -1126,6 +1126,10 @@ int handle_async_service_check_result(service *temp_service, check_result *queue
 		temp_service->last_notification = (time_t)0;
 		temp_service->next_notification = (time_t)0;
 
+		/* 2012-04: Reset attempt numbers on hard state change - jbuchbinder */
+		temp_service->current_attempt = 0;
+		temp_service->current_notification_number = 0;
+
 		/* reset notification suppression option */
 		temp_service->no_more_notifications = FALSE;
 
